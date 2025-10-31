@@ -1,8 +1,8 @@
-# Current Checkpoint: omni-ai WS6 Complete ✅ → WS7 Next
+# Current Checkpoint: omni-ai WS7 Complete ✅ → Research Phase
 
 **Last Updated**: 2025-10-31
-**Current Phase**: Phase 5 - Production Readiness (WS6-WS8)
-**Active Workstream**: WS7 (Token Optimization)
+**Current Phase**: Research & Planning (Claude Agent SDK Migration)
+**Active Workstream**: Research (Comprehensive Analysis for WS8-WS13)
 
 ---
 
@@ -164,16 +164,16 @@ rm temp-test-wsX.js
 **Architecture Note**: Command palette provides quick navigation to views, agents, and models. Progress tracking uses Zustand store for real-time UI updates. Transparency hints currently simulated (future enhancement: connect to Mastra streaming events). Stop button uses AbortController for graceful cancellation.
 
 **Git Commits**:
-- `[current]` - feat(WS5): implement command palette, progress tracking, and transparency hints
+- `78368b8` - feat(WS7): implement token optimization and agent configuration
+- `bacb293` - feat(WS6): fix omni-api-mcp environment variable passing
+- `8ff93c2` - security: remove .env.local from git tracking
+- `126434c` - refactor: update providers to AI SDK v5 and improve chat API
+- `364a77d` - feat(WS5): implement command palette, progress tracking, and transparency hints
+- `4dc54d8` - chore: close WS5 and create WS6-WS8 workstreams (Mastra-first approach)
 - `ccdbc8b` - feat(WS4): implement Mastra workflows for DataDog investigation and multi-API correlation
 - `7745633` - chore: update checkpoint to mark WS4 complete and prepare for WS5
 - `e45a048` - feat(WS4): implement 3 agents, chat interface, and Mastra memory integration
 - `98dc937` - feat(WS3): complete MCP integration with tool wrappers and UI components
-- `1b41900` - feat(WS2): complete provider infrastructure and UI components
-- `b18875a` - feat(WS2): implement provider infrastructure - standard providers and OAuth2 gateway
-- `4919aad` - chore: update checkpoint to mark WS1 complete and prepare for WS2
-- `71b5060` - feat: complete WS1 - Next.js 16 + Mastra + Tailwind v4 setup
-- `95c61d2` - docs: update Next.js 14 to Next.js 15 across all documentation
 
 ---
 
@@ -287,15 +287,23 @@ All new workstreams focus on **using Mastra's built-in capabilities** instead of
 - **Solution**: Added `env: process.env` to MCPClient server config
 - **Verification**: omni-api-mcp subprocess starts successfully with 16 services loaded
 
-### ✅ WS7: Token Optimization (COMPLETE)
-- Use Mastra Memory retention policies
-- Configure agent token limits
-- Prevent rate limit errors
+### ✅ WS7: Token Optimization & Agent Configuration (COMPLETE)
+- Expand system instructions to 1,800+ tokens for prompt caching
+- Add agent configuration UI with per-provider/model settings
+- Implement workaround for Mastra prompt caching bug
+- Configure MCP tool cacheControl
 - **Status**: ✅ Complete (2025-10-31)
 - **Dependencies**: WS4 ✅, WS6 ✅
 - **Priority**: P0 (CRITICAL - Blocker)
-- **Solution**: Implemented TokenLimiter processor + lastMessages: 20 across all agents
-- **Token Budget**: 32k limit (25% of GPT-4o's 128k max context)
+- **Solution**:
+  - Expanded all agent instructions to ~1,800 tokens (above 1,024 caching threshold)
+  - Added agent config store for runtime customization
+  - Implemented cacheControl workaround in chat API route
+  - Added MCP tool cacheControl configuration
+- **Known Issues**:
+  - Mastra bug: providerOptions not passed to AI SDK
+  - Workaround in place until upstream fix
+- **Git Commit**: `78368b8` - feat(WS7): implement token optimization and agent configuration
 
 ### ⏳ WS8: Real Streaming & Investigation UI (PENDING)
 - Use Mastra agent streaming API
@@ -381,28 +389,101 @@ git log --oneline
 
 ---
 
+## 🔬 Research Phase: Claude Agent SDK Migration
+
+**Status**: Planning comprehensive migration from Mastra to Claude Agent SDK
+**Duration**: Research (2-3 days) → Implementation (3-4 weeks)
+
+### Rationale for Migration
+
+Based on comprehensive research and user clarification:
+
+1. **✅ Runtime provider switching not required** - omni-ai will be a bundled local application where users set provider once and restart to change (standard desktop app UX)
+
+2. **✅ Prompt caching works natively** - No workarounds needed like current Mastra bug
+
+3. **✅ Production-ready stability** - Built by Anthropic vs community project
+
+4. **✅ Rich built-in tools** - Read, Write, Bash, WebSearch, Grep, etc.
+
+5. **✅ stdio MCP support** - Works with omni-api-mcp as-is
+
+6. **✅ Custom gateway support** - `ANTHROPIC_BASE_URL` environment variable for enterprise OAuth2 gateways
+
+### Scope of Research
+
+**Required Documentation** (to be created):
+
+1. **Mastra Parity Analysis**
+   - Agent system (3 agents: DataDog Champion, API Correlator, Smart Agent)
+   - Workflow orchestration (multi-step investigations)
+   - Session management & persistence
+   - Token optimization & memory management
+
+2. **Custom Provider Integration**
+   - Enterprise OAuth2 gateway setup
+   - Multi-LLM support (Azure, AWS, GCP)
+   - baseURL configuration patterns
+
+3. **MCP Integration Strategy**
+   - stdio transport with omni-api-mcp
+   - Tool definition & execution
+   - Error handling & retries
+
+4. **UI Enhancements**
+   - Smart message formatting
+   - Code block rendering
+   - Tool call visualization
+   - Streaming progress indicators
+
+5. **Distribution Strategy**
+   - Bundling omni-ai + omni-api-mcp
+   - MCP registry integration
+   - User installation guide
+
+### Workstreams to Create
+
+- WS8: Claude Agent SDK Foundation & MCP Integration
+- WS9: Agent Migration (3 agents)
+- WS10: Custom Provider & Enterprise Gateway
+- WS11: Session Management & Persistence Layer
+- WS12: UI Polish & Smart Message Display
+- WS13: Distribution & Bundling
+
+---
+
 ## Context for Next Session
 
-**You are ready for WS8!**
+**You are in Research Phase!**
 
-1. **First action**: Read `.claude-code/checkpoints/checkpoint-ws8-streaming-ui.md`
-2. **Critical issue**: TransparencyHint/IterationProgress are simulated, not real
-3. **Approach**: **Mastra-First** - Use Mastra's agent streaming API
-4. **Goal**: Connect UI to real agent streaming events (SSE)
+1. **First action**: Comprehensive research of Claude Agent SDK capabilities
+2. **Use MCP servers**: Query Mastra docs MCP and shadcn MCP for information
+3. **Create documentation**: Detailed workstream checkpoints for WS8-WS13
+4. **Include links**: All supporting research documents and external references
 
-**Key Principle**: Use Mastra's built-in features (MCP config, Memory retention, streaming API) instead of custom implementations.
+**Research Areas**:
+- Claude Agent SDK TypeScript API (full reference)
+- Session management & persistence patterns
+- MCP stdio integration examples
+- Enterprise gateway configuration
+- shadcn UI components for chat interfaces
+- Distribution/bundling strategies for Electron/Tauri
+
+**Deliverables**:
+- 6 workstream checkpoint files (WS8-WS13)
+- Supporting research documents
+- Migration guide from Mastra to Claude Agent SDK
+- Timeline and effort estimates
 
 **Timeline**:
-- WS6: ✅ Complete (env config)
-- WS7: ✅ Complete (token optimization)
-- WS8: 3-4 days (streaming UI)
-- **Total**: ~1 week remaining to production readiness
-
-**Success Criteria**: See `.claude-code/GAP_ANALYSIS.md`
+- WS1-WS7: ✅ Complete (Mastra-based foundation)
+- Research Phase: 2-3 days
+- WS8-WS13: 3-4 weeks (Claude Agent SDK migration)
+- **Total**: 4-5 weeks to production
 
 ---
 
 **Last Updated**: 2025-10-31
-**Current Checkpoint**: WS7 complete ✅
-**Next Checkpoint**: WS8 (Real Streaming & Investigation UI) 🚀
-**Mastra-First Approach**: ✅ Successfully used for WS6 (env) and WS7 (token optimization)
+**Current Checkpoint**: WS7 complete ✅ → Research Phase
+**Next Phase**: Comprehensive Claude Agent SDK migration planning
+**Git Commit**: `78368b8` - feat(WS7): implement token optimization and agent configuration
