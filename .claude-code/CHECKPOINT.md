@@ -389,10 +389,10 @@ git log --oneline
 
 ---
 
-## 🔬 Research Phase: Claude Agent SDK Migration
+## 🔬 Research Phase: Claude Agent SDK Migration ✅ COMPLETE
 
-**Status**: Planning comprehensive migration from Mastra to Claude Agent SDK
-**Duration**: Research (2-3 days) → Implementation (3-4 weeks)
+**Status**: ✅ Research Complete → Ready for WS8 Implementation
+**Duration**: Research completed (2025-10-31)
 
 ### Rationale for Migration
 
@@ -410,80 +410,196 @@ Based on comprehensive research and user clarification:
 
 6. **✅ Custom gateway support** - `ANTHROPIC_BASE_URL` environment variable for enterprise OAuth2 gateways
 
-### Scope of Research
+### Research Completed ✅
 
-**Required Documentation** (to be created):
+**Documents Created**:
+1. ✅ [Mastra Parity Analysis](../docs/MASTRA_PARITY_ANALYSIS.md) - Complete feature comparison
+2. ✅ [Migration Guide](../docs/CLAUDE_SDK_MIGRATION_GUIDE.md) - Step-by-step implementation guide
+3. ✅ 6 Workstream Checkpoints (WS8-WS13) - Detailed task breakdowns
 
-1. **Mastra Parity Analysis**
-   - Agent system (3 agents: DataDog Champion, API Correlator, Smart Agent)
-   - Workflow orchestration (multi-step investigations)
-   - Session management & persistence
-   - Token optimization & memory management
+**Research Sources**:
+- Claude Agent SDK Documentation (overview, TypeScript API, hooks)
+- Mastra Agent API Reference
+- shadcn/ui Component Library (449 components reviewed)
+- MCP Protocol Specification
 
-2. **Custom Provider Integration**
-   - Enterprise OAuth2 gateway setup
-   - Multi-LLM support (Azure, AWS, GCP)
-   - baseURL configuration patterns
+### Workstreams Created
 
-3. **MCP Integration Strategy**
-   - stdio transport with omni-api-mcp
-   - Tool definition & execution
-   - Error handling & retries
+- ✅ **WS8**: Claude Agent SDK Foundation & MCP Integration (3-4 days)
+- ✅ **WS9**: Agent Migration with Sub-agents (1-2 days) **SIMPLIFIED** ✨
+- ✅ **WS10**: Enterprise Gateway & Multi-LLM Support (2-3 days)
+- ✅ **WS11**: Simple Session Persistence (1-2 days) **SIMPLIFIED** ✨
+- ✅ **WS12**: UI Polish & Smart Message Display (5-7 days)
+- ✅ **WS13**: Node.js Distribution (2-3 days)
+- ✅ **WS14**: Electron Bundling (3-5 days) **OPTIONAL**
 
-4. **UI Enhancements**
-   - Smart message formatting
-   - Code block rendering
-   - Tool call visualization
-   - Streaming progress indicators
+**Total Implementation Timeline (Required)**: 15-23 days (3-5 weeks)
+**With Optional Electron**: 18-28 days (4-6 weeks)
 
-5. **Distribution Strategy**
-   - Bundling omni-ai + omni-api-mcp
-   - MCP registry integration
-   - User installation guide
+**Time Saved**: 10-13 days (nearly 50%!) from original 25-36 day estimate
 
-### Workstreams to Create
+### Key Findings
 
-- WS8: Claude Agent SDK Foundation & MCP Integration
-- WS9: Agent Migration (3 agents)
-- WS10: Custom Provider & Enterprise Gateway
-- WS11: Session Management & Persistence Layer
-- WS12: UI Polish & Smart Message Display
-- WS13: Distribution & Bundling
+**Advantages of Migration**:
+- Native prompt caching (90% cost reduction)
+- Automatic context compaction
+- No Mastra bugs (providerOptions issue resolved)
+- Production stability (Anthropic-maintained)
+- Rich built-in tools
+
+**Migration Complexity** (Revised after deep research):
+- Low: MCP integration (works out-of-box), session management (simple ID storage)
+- Medium: Enterprise gateway configuration
+- **ELIMINATED**: Agent wrapper (use query() directly), workflow orchestration (sub-agents replace)
+
+**Major Discoveries** ✨:
+1. **Sub-agents replace workflows** → Automatic delegation based on descriptions (saves 5-7 days!)
+2. **Native session management** → `resume: sessionId` handles all history (saves 3-5 days!)
+3. **No wrapper class needed** → Use query() directly (saves 2-3 days!)
+4. **Built-in cost tracking** → No custom implementation needed (saves 1-2 days!)
+
+**Actual Custom Work Required**:
+1. Enterprise OAuth2 gateway config (2-3 days)
+2. Simple session ID storage in LibSQL (1-2 days)
+3. UI components and polish (5-7 days)
+4. Distribution packaging (2-3 days, +3-5 for optional Electron)
+
+---
+
+## Workstream Overview (Updated)
+
+### ✅ WS1-WS7: Foundation Complete (Mastra-based)
+
+All foundation work complete with working chat interface, 3 agents, MCP integration, and token optimization.
+
+### 🔄 WS8-WS13: Claude Agent SDK Migration (Not Started)
+
+**WS8: Foundation & MCP Integration**
+- Install @anthropic-ai/claude-agent-sdk
+- Configure omni-api-mcp with stdio transport
+- Create query() wrapper
+- Validate end-to-end tool calling
+- **Checkpoint**: [checkpoint-ws8-claude-sdk-foundation.md](./checkpoints/checkpoint-ws8-claude-sdk-foundation.md)
+
+**WS9: Agent Migration with Sub-agents** (SIMPLIFIED ✨)
+- Configure 3 sub-agents with clear descriptions
+- Use query() directly with agents option (no wrapper class!)
+- Implement hallucination reduction prompts
+- Test automatic delegation
+- Update UI agent selector
+- **Duration**: 1-2 days (was 5-7 days)
+- **Checkpoint**: [checkpoint-ws9-agent-migration.md](./checkpoints/checkpoint-ws9-agent-migration.md)
+
+**WS10: Enterprise Gateway & Multi-LLM**
+- Configure ANTHROPIC_BASE_URL for gateway
+- Test with Azure/AWS/GCP endpoints
+- Update Settings UI (remove runtime switching)
+- Document provider configuration
+- **Checkpoint**: [checkpoint-ws10-enterprise-gateway.md](./checkpoints/checkpoint-ws10-enterprise-gateway.md)
+
+**WS11: Simple Session Persistence** (SIMPLIFIED ✨)
+- Create simple session ID storage (mapping: threadId+resourceId → sessionId)
+- Use resume: sessionId option (SDK handles all history!)
+- Add session management endpoints (list/delete)
+- Test persistence across restarts
+- **Duration**: 1-2 days (was 5-7 days)
+- **Checkpoint**: [checkpoint-ws11-session-persistence.md](./checkpoints/checkpoint-ws11-session-persistence.md)
+
+**WS12: UI Polish & Smart Display**
+- Enhance message components (markdown + code highlighting)
+- Improve streaming UI (parse SDK chunks)
+- Enhanced tool call cards (collapsible)
+- Loading skeletons and error handling
+- **Checkpoint**: [checkpoint-ws12-ui-polish.md](./checkpoints/checkpoint-ws12-ui-polish.md)
+
+**WS13: Node.js Distribution** (PRIMARY)
+- Create production build script
+- Bundle omni-api-mcp (embedded)
+- Create launcher scripts (Unix + Windows)
+- Package as tar.gz/zip archives
+- Installation documentation
+- **Duration**: 2-3 days
+- **Distribution Model**: Self-contained localhost app (simpler than Electron!)
+- **Checkpoint**: [checkpoint-ws13-nodejs-distribution.md](./checkpoints/checkpoint-ws13-nodejs-distribution.md)
+
+**WS14: Electron Bundling** (OPTIONAL)
+- Install Electron & electron-builder
+- Configure main process and preload
+- Bundle with omni-api-mcp
+- Create platform-specific installers
+- Auto-update support
+- **Duration**: 3-5 days
+- **Note**: Only needed if native desktop app experience is required
+- **Checkpoint**: [checkpoint-ws14-electron-bundling.md](./checkpoints/checkpoint-ws14-electron-bundling.md)
+
+---
+
+## Additional Enhancement: Hallucination Reduction
+
+**User Request** (2025-10-31): Integrate hallucination reduction techniques from Claude docs for all LLM interactions.
+
+**Documentation Reference**: https://docs.claude.com/en/docs/test-and-evaluate/strengthen-guardrails/reduce-hallucinations
+
+**Implementation Plan** (to be integrated into WS9/WS12):
+1. Add response validation hooks
+2. Implement fact-checking mechanisms
+3. Add confidence scoring
+4. Cross-reference tool results
+5. User-facing uncertainty indicators
+
+**Action**: Add to WS9 (agent instructions) and WS12 (UI indicators)
+
+---
+
+## Next Steps
+
+### Immediate Actions
+
+1. **Start WS8**: Begin Claude Agent SDK installation and MCP configuration
+2. **Read checkpoints**: Review detailed task lists in `.claude-code/checkpoints/checkpoint-ws8-*.md`
+3. **Reference docs**: Use parity analysis and migration guide during implementation
+
+### Implementation Order
+
+Must follow sequentially:
+1. WS8 (Foundation) → Required for all others
+2. WS9 (Agents) → Required for WS11, WS12
+3. WS10 (Gateway) → Can run parallel with WS9
+4. WS11 (Sessions) → Depends on WS9
+5. WS12 (UI) → Depends on WS9, WS11
+6. WS13 (Distribution) → Depends on all above
 
 ---
 
 ## Context for Next Session
 
-**You are in Research Phase!**
+**Current Status**: Research complete ✅, ready to implement WS8
 
-1. **First action**: Comprehensive research of Claude Agent SDK capabilities
-2. **Use MCP servers**: Query Mastra docs MCP and shadcn MCP for information
-3. **Create documentation**: Detailed workstream checkpoints for WS8-WS13
-4. **Include links**: All supporting research documents and external references
+**When starting WS8**:
+1. Read [checkpoint-ws8-claude-sdk-foundation.md](./checkpoints/checkpoint-ws8-claude-sdk-foundation.md)
+2. Follow installation steps exactly
+3. Test MCP connection thoroughly
+4. Validate prompt caching is working
+5. Mark tasks complete in checkpoint file
 
-**Research Areas**:
-- Claude Agent SDK TypeScript API (full reference)
-- Session management & persistence patterns
-- MCP stdio integration examples
-- Enterprise gateway configuration
-- shadcn UI components for chat interfaces
-- Distribution/bundling strategies for Electron/Tauri
+**Supporting Documents**:
+- **Parity Analysis**: [docs/MASTRA_PARITY_ANALYSIS.md](../docs/MASTRA_PARITY_ANALYSIS.md)
+- **Migration Guide**: [docs/CLAUDE_SDK_MIGRATION_GUIDE.md](../docs/CLAUDE_SDK_MIGRATION_GUIDE.md)
+- **Workstream Checkpoints**: `.claude-code/checkpoints/checkpoint-ws{8-13}-*.md`
 
-**Deliverables**:
-- 6 workstream checkpoint files (WS8-WS13)
-- Supporting research documents
-- Migration guide from Mastra to Claude Agent SDK
-- Timeline and effort estimates
+**Timeline Estimate** (REVISED ✨):
+- WS1-WS7: ✅ Complete (Mastra foundation)
+- Research Phase: ✅ Complete (2 days)
+- WS8-WS13: 15-23 days (3-5 weeks) **[REDUCED from 25-36 days!]**
+- WS14 (optional Electron): +3-5 days
+- **Total to Production (Node.js)**: 4-6 weeks from WS1 start
+- **Total with Electron**: 5-7 weeks from WS1 start
 
-**Timeline**:
-- WS1-WS7: ✅ Complete (Mastra-based foundation)
-- Research Phase: 2-3 days
-- WS8-WS13: 3-4 weeks (Claude Agent SDK migration)
-- **Total**: 4-5 weeks to production
+**Time Savings**: 10-13 days (nearly 50%) thanks to Claude SDK native features!
 
 ---
 
 **Last Updated**: 2025-10-31
-**Current Checkpoint**: WS7 complete ✅ → Research Phase
-**Next Phase**: Comprehensive Claude Agent SDK migration planning
+**Current Checkpoint**: Research Complete ✅ → WS8 Ready
+**Next Phase**: Begin WS8 (Claude Agent SDK Foundation & MCP Integration)
 **Git Commit**: `78368b8` - feat(WS7): implement token optimization and agent configuration
