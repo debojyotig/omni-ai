@@ -1,88 +1,103 @@
-# Current Checkpoint: omni-ai Bootstrap Phase
+# Current Checkpoint: omni-ai WS1 Complete
 
-**Last Updated**: 2025-10-30
-**Current Phase**: Bootstrap & Documentation ✅ Complete
-**Active Workstream**: Ready for WS1 (Mastra + Next.js Setup)
+**Last Updated**: 2025-10-31
+**Current Phase**: Phase 1 - Foundation ✅ WS1 Complete
+**Active Workstream**: Ready for WS2 (OAuth2 Hybrid Providers)
 
 ---
 
 ## Current Status
 
 **Project**: omni-ai (Intelligent Investigation Agent Platform)
-**Framework**: Mastra.ai + Next.js 15
-**Architecture**: Next.js web app + Mastra agents + omni-api-mcp (MCP protocol)
-**Status**: Documentation complete, ready for implementation
+**Framework**: Mastra.ai + Next.js 16
+**Architecture**: Next.js web app + Mastra agents (integrated) + omni-api-mcp (MCP protocol)
+**Status**: WS1 complete, foundation ready for WS2
 
-### Completed (Bootstrap Phase)
-- [x] Architecture design (Activity Bar + Main Content, no sidebars)
-- [x] Mastra feasibility research (✅ MCP integration verified, ✅ OAuth2 feasible)
-- [x] Complete implementation plan (5 workstream checkpoints)
-- [x] Project structure created
-- [x] **APP_VISION.md** - Simple app idea and AI capabilities
-- [x] **CLAUDE.md** - Complete project context
-- [x] **README.md** - Quick start guide
-- [x] Environment setup (.env.example, .gitignore)
-- [x] Tracking system (.claude-code/ structure)
+### Completed (WS1: Mastra + Next.js Setup) ✅
+
+- [x] Next.js 16.0.1 installed with Turbopack
+- [x] React 19.2.0 configured
+- [x] Tailwind CSS v4 with @tailwindcss/postcss
+- [x] Activity Bar component (72px width)
+- [x] Zustand view store with localStorage persistence
+- [x] App structure (layout + page)
+- [x] TypeScript configured with path aliases (@/*)
+- [x] Dark mode enabled by default
+- [x] View switching working (Chat ⇄ Settings)
+- [x] Dev server running successfully
+
+**Git Commits**:
+- `95c61d2` - docs: update Next.js 14 to Next.js 15 across all documentation
+- `71b5060` - feat: complete WS1 - Next.js 16 + Mastra + Tailwind v4 setup
 
 ---
 
 ## What's Next
 
-### Next Workstream: WS1 - Mastra + Next.js Setup
+### Next Workstream: WS2 - OAuth2 Hybrid Providers
 
-**Duration**: 2-3 days
-**Checkpoint**: `.claude-code/checkpoints/checkpoint-ws1-mastra-nextjs-setup.md`
-**Priority**: Critical (foundation for entire project)
+**Duration**: 3-4 days
+**Checkpoint**: `.claude-code/checkpoints/checkpoint-ws2-oauth2-providers.md`
+**Priority**: High (enables runtime model switching)
+**Dependencies**: WS1 ✅
 
-**Objective**: Bootstrap omni-ai with Next.js 15, Mastra framework, and establish development environment
+**Objective**: Implement hybrid provider system (Mastra standard + custom OAuth2) with runtime switching
 
 **Key Tasks**:
-1. Initialize Next.js project with Mastra
-2. Copy styling from omni-agent (Tailwind, HSL colors, Inter font)
-3. Install shadcn components
-4. Create Activity Bar component
-5. Set up Zustand stores
-6. Verify basic functionality
+1. Configure Mastra built-in providers (OpenAI, Anthropic)
+2. Implement OAuth2Gateway for enterprise providers (Azure, AWS, GCP)
+3. Create custom provider wrappers (AzureOpenAIProvider, etc.)
+4. Build HybridProviderManager to unify both systems
+5. Create provider store (Zustand) with persistence
+6. Build Settings panel with provider selector
+7. Build Chat header with model selector
+8. Test runtime provider/model switching
 
 **Getting Started**:
 ```bash
 cd ~/code/omni-ai
-npm create mastra@latest .
-# Follow WS1 checkpoint tasks
+# Read WS2 checkpoint
+cat .claude-code/checkpoints/checkpoint-ws2-oauth2-providers.md
+# Start implementation
+npm run dev
 ```
 
 ---
 
 ## Workstream Overview
 
-### WS1: Mastra + Next.js Setup (2-3 days)
-- Bootstrap project with Mastra
+### ✅ WS1: Mastra + Next.js Setup (COMPLETE)
+- Bootstrap project with Next.js 16
 - Activity Bar + basic layout
 - Styling from omni-agent
-- **Status**: Ready to start
+- **Status**: ✅ Complete (2025-10-31)
 
-### WS2: OAuth2 Hybrid Providers (3-4 days)
+### 🔄 WS2: OAuth2 Hybrid Providers (ACTIVE)
 - HybridProviderManager (Mastra + custom OAuth2)
 - Runtime switching (provider in Settings, model in chat header)
-- **Dependencies**: WS1
+- **Status**: ⏳ Ready to start
+- **Dependencies**: WS1 ✅
 
-### WS3: MCP Integration (2-3 days)
+### ⏳ WS3: MCP Integration
 - @mastra/mcp setup
 - Connect to omni-api-mcp
 - Test tool calling
-- **Dependencies**: WS1
+- **Status**: ⏳ Pending
+- **Dependencies**: WS1 ✅
 
-### WS4: Agents + Workflows (1-2 weeks)
+### ⏳ WS4: Agents + Workflows
 - 3 agents (DataDog Champion, API Correlator, Smart Agent)
 - 2 workflows (DataDog Investigation, Multi-API Correlation)
 - Agent selector UI
-- **Dependencies**: WS1, WS2, WS3
+- **Status**: ⏳ Pending
+- **Dependencies**: WS1 ✅, WS2 ✅, WS3 ✅
 
-### WS5: UI Polish (1 week)
+### ⏳ WS5: UI Polish
 - Command palette (Cmd+K)
 - Iteration progress bar
 - Progressive transparency hints
-- **Dependencies**: WS4
+- **Status**: ⏳ Pending
+- **Dependencies**: WS4 ✅
 
 ---
 
@@ -96,7 +111,7 @@ npm create mastra@latest .
 - call_rest_api, call_graphql
 - summarize_multi_api_results
 
-**Integration**: omni-ai consumes these tools via @mastra/mcp
+**Integration**: omni-ai consumes these tools via @mastra/mcp (WS3)
 
 ### omni-agent (/Users/debojyoti.ghosh/code/omni-agent)
 **Status**: DEPRECATED (used as reference only)
@@ -106,50 +121,68 @@ npm create mastra@latest .
 
 ---
 
-## Prerequisites Checklist
+## Tech Stack (Current)
 
-Before starting WS1:
-- [x] Project structure created
-- [x] Documentation complete
-- [x] Architecture designed
-- [x] Mastra feasibility verified
-- [x] omni-api-mcp ready (provides MCP tools)
-- [x] omni-agent available (for UI reference)
+**Framework & Runtime:**
+- Next.js 16.0.1 with Turbopack
+- React 19.2.0
+- Node.js 20+, TypeScript 5.9.3
+
+**Styling:**
+- Tailwind CSS 4.1.16 (@tailwindcss/postcss)
+- HSL color system (dark mode)
+- Inter font (next/font/google)
+
+**State Management:**
+- Zustand 5.0.8 with localStorage persistence
+
+**Mastra (Integrated):**
+- @mastra/core 0.23.3
+- @mastra/memory 0.15.10
+- @mastra/libsql 0.16.1
+
+**Icons & UI:**
+- lucide-react 0.548.0
+- shadcn/ui (to be added in WS2)
 
 ---
 
 ## Verification Commands
 
-After WS1 complete:
+**Check WS1 completion:**
 ```bash
-# Run dev server
 npm run dev
+# ✓ Server starts at http://localhost:3000
+# ✓ Activity Bar appears
+# ✓ Chat/Settings view switching works
+# ✓ Dark mode active
+# ✓ No console errors
+```
 
-# Visit http://localhost:3000
-# Verify Activity Bar appears
-# Verify view switching works (Chat, Settings)
-# Verify styling matches omni-agent
-# Verify dark mode works
+**Verify git history:**
+```bash
+git log --oneline
+# 71b5060 feat: complete WS1 - Next.js 16 + Mastra + Tailwind v4 setup
+# 95c61d2 docs: update Next.js 14 to Next.js 15 across all documentation
 ```
 
 ---
 
 ## Context for Next Session
 
-**You are ready to implement!**
+**You are ready for WS2!**
 
-1. **First action**: Run `npm create mastra@latest .` in ~/code/omni-ai
-2. **Read**: `.claude-code/checkpoints/checkpoint-ws1-mastra-nextjs-setup.md`
-3. **Reference**: omni-agent for styling (`.claude-code/references/omni-agent-codebase.md`)
-4. **WebFetch**: Mastra docs as needed (https://mastra.ai/en/docs/)
-5. **Use**: shadcn MCP server if available
+1. **First action**: Read `.claude-code/checkpoints/checkpoint-ws2-oauth2-providers.md`
+2. **Focus**: Implement OAuth2 hybrid provider system
+3. **Reference**: omni-agent OAuth2 logic (`.claude-code/references/omni-agent-codebase.md`)
+4. **Goal**: Runtime model switching without restart
 
-**Timeline**: 6 weeks to production MVP
+**Timeline**: 6 weeks to production MVP (Week 2 starting)
 
 **Success Criteria**: See `.claude-code/PROGRESS.md`
 
 ---
 
-**Last Updated**: 2025-10-30
-**Current Checkpoint**: Bootstrap complete ✅
-**Next Checkpoint**: WS1 (Mastra + Next.js Setup) 🚀
+**Last Updated**: 2025-10-31
+**Current Checkpoint**: WS1 complete ✅
+**Next Checkpoint**: WS2 (OAuth2 Hybrid Providers) 🚀
