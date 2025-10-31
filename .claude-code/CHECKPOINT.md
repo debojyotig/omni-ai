@@ -61,6 +61,9 @@
 - [x] DataDog Champion agent implemented (root cause analysis)
 - [x] API Correlator agent implemented (cross-service correlation)
 - [x] Smart Agent implemented (auto-router with intent detection)
+- [x] DataDog Investigation workflow implemented (4-step orchestration)
+- [x] Multi-API Correlation workflow implemented (5-step orchestration)
+- [x] Workflows registered in Mastra instance
 - [x] Agent store created with localStorage persistence
 - [x] Chat interface built with message history
 - [x] Chat API route created using Mastra memory
@@ -70,7 +73,7 @@
 - [x] shadcn components installed (scroll-area, textarea)
 - [x] End-to-end chat functionality tested
 
-**Architecture Note**: Agents created dynamically at runtime to support provider/model switching. All agents follow 3-layer intelligence approach (templates → query builder → exploration fallback).
+**Architecture Note**: Agents created dynamically at runtime to support provider/model switching. All agents follow 3-layer intelligence approach (templates → query builder → exploration fallback). Workflows use Mastra's createWorkflow() and createStep() pattern with proper input/output schemas.
 
 **Git Commits**:
 - `[current]` - feat(WS4): implement 3 agents, chat interface, and Mastra memory integration
@@ -96,19 +99,18 @@
 
 **Key Tasks**:
 1. Install command palette components (shadcn command + dialog)
-2. Implement DataDog Champion agent (root cause analysis)
-3. Implement API Correlator agent (cross-service correlation)
-4. Implement Smart Agent (auto-router with intent detection)
-5. Create chat interface with message history
-6. Create Chat API route using Mastra memory
-7. Add agent selector to chat header
-8. Test conversation persistence
+2. Implement command palette with Cmd+K shortcut
+3. Add iteration progress bar with stop button
+4. Implement progressive transparency hints
+5. Add tool call visualization in chat
+6. Test all UI polish features
+7. Final integration testing
 
 **Getting Started**:
 ```bash
 cd ~/code/omni-ai
-# Read WS4 checkpoint
-cat .claude-code/checkpoints/checkpoint-ws4-agents-workflows.md
+# Read WS5 checkpoint
+cat .claude-code/checkpoints/checkpoint-ws5-ui-polish.md
 # Start implementation
 npm run dev
 ```
