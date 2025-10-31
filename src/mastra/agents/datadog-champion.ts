@@ -1,8 +1,9 @@
 import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
 import { LibSQLStore } from '@mastra/libsql';
-import { hybridProviderManager } from '@/lib/providers/hybrid-manager';
-import { mcpTools } from '@/lib/mcp/tools';
+import { openai } from '@ai-sdk/openai';
+import { anthropic } from '@ai-sdk/anthropic';
+import { getMCPTools } from '@/lib/mcp/tools';
 import path from 'path';
 
 /**
@@ -14,12 +15,24 @@ import path from 'path';
  * 2. Query Builder Intelligence (35% queries, 2-3 iterations)
  * 3. Exploration Fallback (5% queries, 5-10 iterations)
  */
-export function createDataDogChampion(providerId: string, modelId: string) {
-  const providerInstance = hybridProviderManager.getProvider(providerId);
+export async function createDataDogChampion(providerId: string, modelId: string) {
+  // Get the AI SDK provider function based on provider ID
+  const getProvider = () => {
+    switch (providerId) {
+      case 'openai':
+        return openai(modelId);
+      case 'anthropic':
+        return anthropic(modelId);
+      default:
+        throw new Error(`Provider not supported: ${providerId}`);
+    }
+  };
 
-  if (!providerInstance) {
-    throw new Error(`Provider not found: ${providerId}`);
-  }
+  // Get MCP tools
+  const tools = await getMCPTools();
+
+  // Use absolute path for database to avoid path resolution issues
+  const dbPath = path.resolve(process.cwd(), '.mastra/data.db');
 
   return new Agent({
     name: 'DataDog Champion',
@@ -93,14 +106,11 @@ Your response:
 4. "Root Cause: payment-v2.3 deployed at 2:40 PM introduced timeout in validation logic. Recommend rollback."
 
 Time saved: 45 minutes → 2 minutes`,
-    model: {
-      provider: providerInstance,
-      name: modelId,
-    },
-    tools: Object.fromEntries(mcpTools.map(tool => [tool.id, tool])),
+    model: getProvider(),
+    tools: tools,
     memory: new Memory({
       storage: new LibSQLStore({
-        url: `file:${path.join(process.cwd(), '.mastra', 'data.db')}`,
+        url: `file:${dbPath}`,
       }),
     }),
   });
