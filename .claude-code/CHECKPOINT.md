@@ -6,6 +6,76 @@
 
 ---
 
+## ⚠️ CRITICAL: Validation Standards for All Workstreams
+
+**READ THIS BEFORE MARKING ANY WORKSTREAM COMPLETE**
+
+### ❌ NOT Sufficient for Completion
+
+- ✗ Initialization logs showing services loaded
+- ✗ No console errors during startup
+- ✗ Tools/functions appearing in lists
+- ✗ Code compiles without errors
+
+### ✅ Required for Completion
+
+**ONE of the following MUST be true:**
+
+1. **Actual end-to-end validation with temp test script**
+   - Create temp validation script (e.g., `temp-test-wsX.js`)
+   - Make actual API calls or function calls
+   - Verify full flow works (not just initialization)
+   - **Clean up temp script after validation** (do not commit)
+   - Document validation results in checkpoint
+
+2. **User validates in terminal**
+   - Ask user to run app (`npm run dev`)
+   - User makes real query/operation
+   - User reports success/failure
+   - Update workstream based on user feedback
+
+### Claude Code Limitations
+
+**What you CANNOT do:**
+- Test authenticated APIs without valid API keys
+- Verify runtime behavior in user's terminal environment
+- See actual user-specific configuration
+
+**What you MUST do:**
+- Create temp test scripts for automated validation
+- Test with public APIs when possible
+- **Ask user to validate** when your tests are insufficient
+- Document validation evidence in checkpoint
+- Clean up temp files after validation
+
+### Validation Process Template
+
+```bash
+# 1. Create temp test script
+# temp-test-wsX.js - Direct function/tool calls
+
+# 2. Run validation
+node temp-test-wsX.js
+
+# 3. Verify results
+# - Check actual API calls succeed
+# - Verify end-to-end flow works
+# - Document evidence
+
+# 4. Clean up
+rm temp-test-wsX.js
+```
+
+### Lesson from WS6
+
+**Initial mistake**: Marked WS6 complete based only on initialization logs showing "11 enabled datasets". This was **false positive** - logs only proved subprocess started, not that env vars were actually used.
+
+**Proper validation**: Created temp test script that made actual CoinGecko API call and verified DataDog showed "available" status. This proved env vars were passed correctly.
+
+**Key takeaway**: Initialization logs ≠ Working feature. Always validate end-to-end.
+
+---
+
 ## Current Status
 
 **Project**: omni-ai (Intelligent Investigation Agent Platform)
