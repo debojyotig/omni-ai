@@ -1,8 +1,8 @@
-# Current Checkpoint: omni-ai WS2 Complete
+# Current Checkpoint: omni-ai WS3 Complete
 
 **Last Updated**: 2025-10-31
-**Current Phase**: Phase 1 - Foundation ✅ WS1 & WS2 Complete
-**Active Workstream**: Ready for WS3 (MCP Integration)
+**Current Phase**: Phase 2 - Integration ✅ WS1, WS2 & WS3 Complete
+**Active Workstream**: Ready for WS4 (Agents + Workflows)
 
 ---
 
@@ -11,7 +11,7 @@
 **Project**: omni-ai (Intelligent Investigation Agent Platform)
 **Framework**: Mastra.ai + Next.js 16
 **Architecture**: Next.js web app + Mastra agents (integrated) + omni-api-mcp (MCP protocol)
-**Status**: WS2 complete, foundation ready for WS3
+**Status**: WS3 complete, MCP integration ready, moving to WS4
 
 ### Completed (WS1: Mastra + Next.js Setup) ✅
 
@@ -40,7 +40,23 @@
 
 **Architecture Note**: Provider metadata lives client-side (lib/config/provider-config.ts), actual provider instantiation happens server-side in API routes (WS4).
 
+### Completed (WS3: MCP Integration) ✅
+
+- [x] @mastra/mcp package installed (v0.23.3)
+- [x] MCP client manager created (lib/mcp/mcp-client.ts)
+- [x] 5 MCP tools wrapped for Mastra (discover_datasets, build_query, call_rest_api, call_graphql, summarize_multi_api_results)
+- [x] Test agent created (lib/mastra/test-agent.ts)
+- [x] Test API route created (app/api/test-mcp/route.ts)
+- [x] ToolCallCard component created (components/tool-call-card.tsx)
+- [x] Tool call store created (lib/stores/tool-call-store.ts)
+- [x] Badge and Card shadcn components installed
+- [x] .env.local configured with OMNI_API_MCP_PATH
+- [x] MCP integration verified and ready for agents
+
+**Architecture Note**: MCP client connects to omni-api-mcp subprocess via stdio. All 5 core tools wrapped and ready for agent use.
+
 **Git Commits**:
+- `[current]` - feat(WS3): complete MCP integration with tool wrappers and UI components
 - `1b41900` - feat(WS2): complete provider infrastructure and UI components
 - `b18875a` - feat(WS2): implement provider infrastructure - standard providers and OAuth2 gateway
 - `4919aad` - chore: update checkpoint to mark WS1 complete and prepare for WS2
@@ -51,28 +67,30 @@
 
 ## What's Next
 
-### Next Workstream: WS3 - MCP Integration
+### Next Workstream: WS4 - Agents + Workflows
 
-**Duration**: 2-3 days
-**Checkpoint**: `.claude-code/checkpoints/checkpoint-ws3-mcp-integration.md`
-**Priority**: High (enables agent tool calling)
-**Dependencies**: WS1 ✅, WS2 ✅
+**Duration**: 1-2 weeks
+**Checkpoint**: `.claude-code/checkpoints/checkpoint-ws4-agents-workflows.md`
+**Priority**: Critical Path (core functionality)
+**Dependencies**: WS1 ✅, WS2 ✅, WS3 ✅
 
-**Objective**: Integrate @mastra/mcp to connect with omni-api-mcp MCP server
+**Objective**: Implement 3 intelligent agents and 2 workflows with Mastra Memory
 
 **Key Tasks**:
-1. Install @mastra/mcp package
-2. Create MCP client for omni-api-mcp
-3. Configure .mcp.json (already created in WS2)
-4. Test tool discovery from omni-api-mcp
-5. Create API route to test tool execution
-6. Verify all omni-api-mcp tools are accessible
+1. Configure Mastra instance with LibSQL storage
+2. Implement DataDog Champion agent (root cause analysis)
+3. Implement API Correlator agent (cross-service correlation)
+4. Implement Smart Agent (auto-router with intent detection)
+5. Create chat interface with message history
+6. Create Chat API route using Mastra memory
+7. Add agent selector to chat header
+8. Test conversation persistence
 
 **Getting Started**:
 ```bash
 cd ~/code/omni-ai
-# Read WS3 checkpoint
-cat .claude-code/checkpoints/checkpoint-ws3-mcp-integration.md
+# Read WS4 checkpoint
+cat .claude-code/checkpoints/checkpoint-ws4-agents-workflows.md
 # Start implementation
 npm run dev
 ```
@@ -92,11 +110,11 @@ npm run dev
 - Runtime switching (provider in Settings, model in chat header)
 - **Status**: ✅ Complete (2025-10-31)
 
-### 🔄 WS3: MCP Integration (ACTIVE)
+### ✅ WS3: MCP Integration (COMPLETE)
 - @mastra/mcp setup
 - Connect to omni-api-mcp
 - Test tool calling
-- **Status**: ⏳ Ready to start
+- **Status**: ✅ Complete (2025-10-31)
 - **Dependencies**: WS1 ✅, WS2 ✅
 
 ### ⏳ WS4: Agents + Workflows
