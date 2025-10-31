@@ -29,3 +29,33 @@ body {
   color: var(--color-foreground);
   background-color: var(--color-background);
 }
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .max-w-3xl {
+    max-width: 100%;
+  }
+}
+
+/* Smooth scrolling */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--color-muted);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(from var(--color-muted-foreground) h s l / 0.3);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(from var(--color-muted-foreground) h s l / 0.5);
+}

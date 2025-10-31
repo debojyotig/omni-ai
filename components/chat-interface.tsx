@@ -8,12 +8,14 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, StopCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAgentStore } from '@/lib/stores/agent-store';
 import { useProviderStore } from '@/lib/stores/provider-store';
+import { useProgressStore } from '@/lib/stores/progress-store';
+import { TransparencyHint } from '@/components/transparency-hint';
 
 interface Message {
   id: string;
@@ -26,10 +28,12 @@ export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { selectedAgent } = useAgentStore();
   const { selectedProviderId, selectedModelId } = useProviderStore();
+  const { setRunning, setHint, reset: resetProgress } = useProgressStore();
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -37,6 +41,16 @@ export function ChatInterface() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const handleStop = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+      setIsLoading(false);
+      setRunning(false);
+      resetProgress();
+    }
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -51,8 +65,19 @@ export function ChatInterface() {
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+    setRunning(true);
+
+    const controller = new AbortController();
+    setAbortController(controller);
 
     try {
+      // Show progressive hints (simulated for now)
+      setHint('Analyzing your question...');
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      setHint('Preparing to query services...');
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
       // Call API to generate response
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -64,6 +89,7 @@ export function ChatInterface() {
           model: selectedModelId,
           threadId: 'main', // Will use Mastra thread management
         }),
+        signal: controller.signal,
       });
 
       const data = await response.json();
@@ -80,17 +106,25 @@ export function ChatInterface() {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Chat error:', error);
-      const errorMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
-        timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('Request aborted by user');
+      } else {
+        console.error('Chat error:', error);
+        const errorMessage: Message = {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
+          timestamp: Date.now(),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      }
     } finally {
       setIsLoading(false);
+      setRunning(false);
+      setHint(null);
+      setAbortController(null);
+      resetProgress();
     }
   };
 
@@ -104,6 +138,10 @@ export function ChatInterface() {
               <p className="text-lg">Ask me anything about your services</p>
               <p className="text-sm mt-2">
                 I can investigate errors, correlate data, and more.
+              </p>
+              <p className="text-xs mt-4 text-muted-foreground/70">
+                Press <kbd className="px-1.5 py-0.5 text-xs border rounded">Cmd</kbd> +{' '}
+                <kbd className="px-1.5 py-0.5 text-xs border rounded">K</kbd> for quick actions
               </p>
             </div>
           )}
@@ -138,6 +176,9 @@ export function ChatInterface() {
         </div>
       </ScrollArea>
 
+      {/* Progressive Transparency Hint */}
+      <TransparencyHint />
+
       {/* Input */}
       <div className="border-t p-4">
         <div className="max-w-3xl mx-auto flex gap-2">
@@ -153,14 +194,17 @@ export function ChatInterface() {
             placeholder="Ask about errors, data inconsistencies, or service status..."
             className="min-h-[60px] max-h-[200px] resize-none"
             disabled={isLoading}
+            aria-label="Message input"
           />
-          <Button onClick={handleSend} disabled={isLoading || !input.trim()}>
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
+          {isLoading ? (
+            <Button onClick={handleStop} variant="destructive">
+              <StopCircle className="w-4 h-4" />
+            </Button>
+          ) : (
+            <Button onClick={handleSend} disabled={!input.trim()}>
               <Send className="w-4 h-4" />
-            )}
-          </Button>
+            </Button>
+          )}
         </div>
       </div>
     </div>

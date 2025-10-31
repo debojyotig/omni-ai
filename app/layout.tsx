@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { ActivityBar } from '@/components/activity-bar'
+import { CommandPalette } from '@/components/command-palette'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
@@ -24,6 +25,7 @@ export default function RootLayout({
             {children}
           </main>
         </div>
+        <CommandPalette />
       </body>
     </html>
   )
