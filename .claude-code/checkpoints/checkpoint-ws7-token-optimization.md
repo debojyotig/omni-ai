@@ -1,19 +1,24 @@
-# WS7: Token Optimization (Mastra Way)
+# WS7: Token Optimization with Dynamic Settings UI (Mastra Way)
 
 **Priority**: P0 (CRITICAL - Blocker)
 **Duration**: 2-3 days
 **Dependencies**: WS4 (Agents + Workflows)
-**Status**: ✅ Complete (2025-10-31)
+**Status**: 🚧 In Progress (2025-10-31)
 
 ---
 
 ## Objective
 
-Prevent rate limit errors using **Mastra's built-in memory and context management features**.
+Prevent rate limit errors using **Mastra's built-in TokenLimiter** with **user-configurable settings** that work for ALL provider/model combinations.
 
-**Problem**: 40,000 tokens/min rate limit after 2-3 iterations.
+**Problem**: Rate limit errors (40,000 tokens/min) after 2-3 iterations.
 
-**Mastra Way**: Use Mastra's Memory retention policies and context window management instead of custom token counting.
+**Root Cause**: Different providers/models have different:
+- Token limits (Anthropic: 40k/min, OpenAI: varies by tier)
+- Context windows (Claude: 200k, GPT-4o: 128k)
+- Optimal token usage patterns
+
+**Mastra Way**: Use TokenLimiter processor with **dynamic configuration per provider/model**.
 
 ---
 
@@ -148,38 +153,144 @@ const recentMessages = await getRecentMessages(
 
 ---
 
-## Implementation Summary
+## Solution Architecture
 
-**Solution Used**: Mastra's built-in `TokenLimiter` processor + `lastMessages` configuration
+### Dynamic Settings UI (Agent Config Tab)
 
-**Configuration Applied to All Agents**:
+**UI Components**:
+1. **Provider/Model Selector** - Choose which provider/model to configure
+2. **Max Output Tokens Slider** - Control TokenLimiter limit (1k-100k range)
+3. **Temperature Slider** - Control randomness (0.0-2.0 range)
+4. **Max Iterations Slider** - Control reasoning loops (1-25 range)
+5. **Save Button** - Persist to localStorage per provider/model
+
+**Settings Storage**:
 ```typescript
-memory: new Memory({
-  storage: new LibSQLStore({ url: `file:${dbPath}` }),
-  options: {
-    lastMessages: 20, // Keep last 20 messages
-  },
-  processors: [
-    new TokenLimiter(32000), // 32k token limit (GPT-4o max: 128k)
-  ],
-}),
+// lib/stores/agent-config-store.ts
+interface AgentConfig {
+  providerId: string;
+  modelId: string;
+  maxOutputTokens: number;    // For TokenLimiter
+  temperature: number;         // For Agent
+  maxIterations: number;       // For Agent
+}
+
+// Stored in localStorage as:
+// agent-config-anthropic-claude-3-7-sonnet = { maxOutputTokens: 8192, ... }
+// agent-config-openai-gpt-4o = { maxOutputTokens: 16384, ... }
 ```
 
-**Token Budget Calculation**:
-- GPT-4o max context: 128k tokens
-- Target context: 32k tokens (25% of max)
-- Headroom: 96k tokens for rate limiting
-- Expected: No rate limits in normal use (20 messages ≈ 8-12k tokens)
+**Agent Implementation**:
+```typescript
+// src/mastra/agents/smart-agent.ts
+export async function createSmartAgent(
+  providerId: string,
+  modelId: string,
+  config: AgentConfig  // ← NEW: Dynamic config parameter
+) {
+  return new Agent({
+    name: 'Smart Agent',
+    model: getProvider(),
+    tools: tools,
+    temperature: config.temperature,           // ← Dynamic
+    maxIterations: config.maxIterations,       // ← Dynamic
+    memory: new Memory({
+      storage: new LibSQLStore({ url: `file:${dbPath}` }),
+      options: {
+        lastMessages: 10,
+      },
+      processors: [
+        new TokenLimiter(config.maxOutputTokens),  // ← Dynamic
+      ],
+    }),
+  });
+}
+```
 
-**Verification**:
-- ✅ Dev server starts successfully
-- ✅ No TypeScript errors
-- ✅ Memory configuration compiles correctly
-- ✅ Ready for testing with long conversations
+### Default Configurations (Safe Defaults)
+
+**Anthropic Claude Models**:
+```typescript
+{
+  maxOutputTokens: 8192,   // Safe for 40k/min rate limit
+  temperature: 0.7,
+  maxIterations: 15
+}
+```
+
+**OpenAI GPT-4o Models**:
+```typescript
+{
+  maxOutputTokens: 16384,  // Higher limit, faster rate limits
+  temperature: 0.7,
+  maxIterations: 15
+}
+```
+
+**Custom Enterprise OAuth2 Providers**:
+```typescript
+{
+  maxOutputTokens: 4096,   // Conservative default
+  temperature: 0.7,
+  maxIterations: 10
+}
+```
+
+### Why This Works for ALL Providers
+
+1. **Provider-Agnostic**: TokenLimiter counts tokens, works with any provider
+2. **User Control**: User can adjust based on their specific rate limits
+3. **Per-Model Tuning**: Different models in same provider can have different configs
+4. **Enterprise Ready**: Custom OAuth2 providers use same mechanism
+5. **Mastra Native**: Uses TokenLimiter processor (not custom code)
+
+---
+
+## Implementation Tasks
+
+### Phase 1: Settings Store & Defaults
+- [ ] Create `lib/stores/agent-config-store.ts` with Zustand
+- [ ] Define default configs for each provider/model
+- [ ] Implement localStorage persistence
+- [ ] Add helper functions to get/set config
+
+### Phase 2: Settings UI
+- [ ] Create Agent Config tab in Settings panel
+- [ ] Build provider/model selector dropdown
+- [ ] Add Max Output Tokens slider (1k-100k, step: 512)
+- [ ] Add Temperature slider (0.0-2.0, step: 0.1)
+- [ ] Add Max Iterations slider (1-25, step: 1)
+- [ ] Show current values and descriptions
+- [ ] Implement save functionality
+
+### Phase 3: Agent Integration
+- [ ] Update all 3 agent creation functions to accept config parameter
+- [ ] Modify `app/api/chat/route.ts` to load config before creating agent
+- [ ] Pass dynamic config to agents
+- [ ] Test with multiple provider/model combinations
+
+### Phase 4: Validation
+- [ ] Test Anthropic Claude with 8k token limit (no rate limits)
+- [ ] Test OpenAI GPT-4o with 16k token limit
+- [ ] Test with rapid message succession (5-10 messages)
+- [ ] Verify TokenLimiter actually prunes messages
+- [ ] Document validation results
+
+---
+
+## Acceptance Criteria
+
+- [ ] Settings UI exists in Agent Config tab
+- [ ] User can configure tokens/temperature/iterations per provider/model
+- [ ] Configurations persist across page reloads
+- [ ] Agents use dynamic config (not hardcoded values)
+- [ ] Works with Anthropic, OpenAI, and custom OAuth2 providers
+- [ ] No rate limit errors with default configurations
+- [ ] User validation confirms it works in real usage
 
 ---
 
 **Created**: 2025-10-31
-**Completed**: 2025-10-31
-**Status**: ✅ Complete
-**Mastra-First Approach**: ✅ Used Mastra's TokenLimiter processor (not custom code)
+**Updated**: 2025-10-31 (Changed to dynamic Settings UI approach)
+**Status**: 🚧 In Progress
+**Mastra-First Approach**: ✅ Using TokenLimiter with dynamic user configuration
