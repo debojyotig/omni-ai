@@ -3,7 +3,13 @@ node_modules
 dist
 .mastra
 .next
-.env.development
+
+# Environment files (contain secrets)
 .env
+.env.local
+.env.development
+.env.production
+
+# Database files
 *.db
 *.db-*
