@@ -1,5 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
+import { TokenLimiter } from '@mastra/memory/processors';
 import { LibSQLStore } from '@mastra/libsql';
 import { openai } from '@ai-sdk/openai';
 import { anthropic } from '@ai-sdk/anthropic';
@@ -112,6 +113,13 @@ Time saved: 45 minutes → 2 minutes`,
       storage: new LibSQLStore({
         url: `file:${dbPath}`,
       }),
+      options: {
+        lastMessages: 20, // Keep last 20 messages for short-term context
+      },
+      processors: [
+        // Enforce token limit to prevent rate limiting (GPT-4o max: 128k, target: 32k)
+        new TokenLimiter(32000),
+      ],
     }),
   });
 }

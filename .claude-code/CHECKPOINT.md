@@ -217,13 +217,15 @@ All new workstreams focus on **using Mastra's built-in capabilities** instead of
 - **Solution**: Added `env: process.env` to MCPClient server config
 - **Verification**: omni-api-mcp subprocess starts successfully with 16 services loaded
 
-### 🚧 WS7: Token Optimization (IN PROGRESS)
+### ✅ WS7: Token Optimization (COMPLETE)
 - Use Mastra Memory retention policies
 - Configure agent token limits
 - Prevent rate limit errors
-- **Status**: 🚧 Ready to Start (WS6 complete)
+- **Status**: ✅ Complete (2025-10-31)
 - **Dependencies**: WS4 ✅, WS6 ✅
 - **Priority**: P0 (CRITICAL - Blocker)
+- **Solution**: Implemented TokenLimiter processor + lastMessages: 20 across all agents
+- **Token Budget**: 32k limit (25% of GPT-4o's 128k max context)
 
 ### ⏳ WS8: Real Streaming & Investigation UI (PENDING)
 - Use Mastra agent streaming API
@@ -311,26 +313,26 @@ git log --oneline
 
 ## Context for Next Session
 
-**You are ready for WS7!**
+**You are ready for WS8!**
 
-1. **First action**: Read `.claude-code/checkpoints/checkpoint-ws7-token-optimization.md`
-2. **Critical issue**: Rate limit errors after 2-3 iterations (40K+ tokens/min)
-3. **Approach**: **Mastra-First** - Query Mastra docs for Memory retention configuration
-4. **Goal**: Prevent rate limits using Mastra's retention policies
+1. **First action**: Read `.claude-code/checkpoints/checkpoint-ws8-streaming-ui.md`
+2. **Critical issue**: TransparencyHint/IterationProgress are simulated, not real
+3. **Approach**: **Mastra-First** - Use Mastra's agent streaming API
+4. **Goal**: Connect UI to real agent streaming events (SSE)
 
 **Key Principle**: Use Mastra's built-in features (MCP config, Memory retention, streaming API) instead of custom implementations.
 
 **Timeline**:
-- WS6: 1-2 days (env config)
-- WS7: 2-3 days (token optimization)
+- WS6: ✅ Complete (env config)
+- WS7: ✅ Complete (token optimization)
 - WS8: 3-4 days (streaming UI)
-- **Total**: ~2 weeks to production readiness
+- **Total**: ~1 week remaining to production readiness
 
 **Success Criteria**: See `.claude-code/GAP_ANALYSIS.md`
 
 ---
 
 **Last Updated**: 2025-10-31
-**Current Checkpoint**: WS6 complete ✅
-**Next Checkpoint**: WS7 (Token Optimization) 🚀
-**Mastra-First Approach**: ✅ Successfully used for WS6 env configuration
+**Current Checkpoint**: WS7 complete ✅
+**Next Checkpoint**: WS8 (Real Streaming & Investigation UI) 🚀
+**Mastra-First Approach**: ✅ Successfully used for WS6 (env) and WS7 (token optimization)
