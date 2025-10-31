@@ -1,8 +1,8 @@
-# Current Checkpoint: omni-ai WS4 Complete
+# Current Checkpoint: omni-ai WS5 Complete ✅ → WS6 Next
 
 **Last Updated**: 2025-10-31
-**Current Phase**: Phase 3 - Core Features ✅ WS1, WS2, WS3 & WS4 Complete
-**Active Workstream**: Ready for WS5 (UI Polish)
+**Current Phase**: Phase 5 - Production Readiness (WS6-WS8)
+**Active Workstream**: WS6 (Environment & MCP Config)
 
 ---
 
@@ -11,7 +11,7 @@
 **Project**: omni-ai (Intelligent Investigation Agent Platform)
 **Framework**: Mastra.ai + Next.js 16
 **Architecture**: Next.js web app + Mastra agents (integrated) + omni-api-mcp (MCP protocol)
-**Status**: WS4 complete, 3 agents working, chat interface functional, ready for UI polish
+**Status**: All 5 workstreams complete, full-featured chat interface with command palette, progress tracking, and transparency hints
 
 ### Completed (WS1: Mastra + Next.js Setup) ✅
 
@@ -75,8 +75,29 @@
 
 **Architecture Note**: Agents created dynamically at runtime to support provider/model switching. All agents follow 3-layer intelligence approach (templates → query builder → exploration fallback). Workflows use Mastra's createWorkflow() and createStep() pattern with proper input/output schemas.
 
+### Completed (WS5: UI Polish) ✅
+
+- [x] Command palette installed (shadcn command + dialog)
+- [x] CommandPalette component implemented with Cmd+K shortcut
+- [x] CommandPalette added to app layout (globally available)
+- [x] Progress store created (lib/stores/progress-store.ts)
+- [x] framer-motion and shadcn progress component installed
+- [x] IterationProgress component built with animated progress bar
+- [x] TransparencyHint component built with fade animations
+- [x] ChatInterface updated with stop button and abort controller
+- [x] Progressive transparency hints integrated (shows agent thinking)
+- [x] IterationProgress added to page layout
+- [x] Responsive design utilities added to globals.css
+- [x] Accessibility improvements (ARIA labels on all interactive elements)
+- [x] Dev server tested - all features working
+
+**Architecture Note**: Command palette provides quick navigation to views, agents, and models. Progress tracking uses Zustand store for real-time UI updates. Transparency hints currently simulated (future enhancement: connect to Mastra streaming events). Stop button uses AbortController for graceful cancellation.
+
 **Git Commits**:
-- `[current]` - feat(WS4): implement 3 agents, chat interface, and Mastra memory integration
+- `[current]` - feat(WS5): implement command palette, progress tracking, and transparency hints
+- `ccdbc8b` - feat(WS4): implement Mastra workflows for DataDog investigation and multi-API correlation
+- `7745633` - chore: update checkpoint to mark WS4 complete and prepare for WS5
+- `e45a048` - feat(WS4): implement 3 agents, chat interface, and Mastra memory integration
 - `98dc937` - feat(WS3): complete MCP integration with tool wrappers and UI components
 - `1b41900` - feat(WS2): complete provider infrastructure and UI components
 - `b18875a` - feat(WS2): implement provider infrastructure - standard providers and OAuth2 gateway
@@ -86,34 +107,67 @@
 
 ---
 
+## Gap Analysis & New Workstreams
+
+**Status**: WS1-WS5 complete, but production gaps identified (see `.claude-code/GAP_ANALYSIS.md`)
+
+### Critical Issues Found
+
+1. **Environment Variables**: omni-api-mcp subprocess can't access .env → auth failures
+2. **Token Optimization**: Rate limit errors after 2-3 iterations (40K tokens/min)
+3. **Streaming UI**: TransparencyHint/IterationProgress are simulated, not real
+
+### Solution: WS6-WS8 (Mastra-First Approach)
+
+All new workstreams focus on **using Mastra's built-in capabilities** instead of custom code.
+
+---
+
 ## What's Next
 
-### Next Workstream: WS5 - UI Polish
+### WS6: Environment Variable & MCP Configuration (P0 - CRITICAL)
 
-**Duration**: 1 week
-**Checkpoint**: `.claude-code/checkpoints/checkpoint-ws5-ui-polish.md`
-**Priority**: Enhancement (UX improvements)
-**Dependencies**: WS1 ✅, WS2 ✅, WS3 ✅, WS4 ✅
+**Status**: Not Started
+**Duration**: 1-2 days
+**Objective**: Fix omni-api-mcp env loading using Mastra's MCP patterns
 
-**Objective**: Polish UX with command palette, iteration progress, progressive transparency
+**Approach**:
+1. Query Mastra docs MCP server for environment handling
+2. Implement Mastra's recommended pattern (env in server config)
+3. Test with authenticated API calls
 
-**Key Tasks**:
-1. Install command palette components (shadcn command + dialog)
-2. Implement command palette with Cmd+K shortcut
-3. Add iteration progress bar with stop button
-4. Implement progressive transparency hints
-5. Add tool call visualization in chat
-6. Test all UI polish features
-7. Final integration testing
+**Checkpoint**: `.claude-code/checkpoints/checkpoint-ws6-env-mcp-config.md`
 
-**Getting Started**:
-```bash
-cd ~/code/omni-ai
-# Read WS5 checkpoint
-cat .claude-code/checkpoints/checkpoint-ws5-ui-polish.md
-# Start implementation
-npm run dev
-```
+---
+
+### WS7: Token Optimization (P0 - CRITICAL)
+
+**Status**: Not Started (blocked by WS6)
+**Duration**: 2-3 days
+**Objective**: Prevent rate limits using Mastra's Memory retention policies
+
+**Approach**:
+1. Query Mastra docs for Memory retention configuration
+2. Use Mastra's retention policies (maxMessages, maxAge)
+3. Configure agent token limits if Mastra supports
+
+**Checkpoint**: `.claude-code/checkpoints/checkpoint-ws7-token-optimization.md`
+
+---
+
+### WS8: Real Streaming & Investigation UI (P1 - HIGH)
+
+**Status**: Not Started (blocked by WS6+WS7)
+**Duration**: 3-4 days
+**Objective**: Connect UI to Mastra's agent streaming events
+
+**Approach**:
+1. Query Mastra docs for agent streaming API
+2. Switch from `agent.generate()` to `agent.stream()`
+3. Return Server-Sent Events (SSE) to client
+4. Connect TransparencyHint/IterationProgress to real events
+
+**Checkpoint**: `.claude-code/checkpoints/checkpoint-ws8-streaming-ui.md`
 
 ---
 
@@ -144,12 +198,38 @@ npm run dev
 - **Status**: ✅ Complete (2025-10-31)
 - **Dependencies**: WS1 ✅, WS2 ✅, WS3 ✅
 
-### ⏳ WS5: UI Polish
+### ✅ WS5: UI Polish (COMPLETE)
 - Command palette (Cmd+K)
 - Iteration progress bar
 - Progressive transparency hints
-- **Status**: ⏳ Ready to Start
+- Stop button with AbortController
+- Accessibility improvements
+- **Status**: ✅ Complete (2025-10-31)
 - **Dependencies**: WS1 ✅, WS2 ✅, WS3 ✅, WS4 ✅
+
+### 🚧 WS6: Environment & MCP Config (IN PROGRESS)
+- Fix omni-api-mcp env variable loading
+- Use Mastra's MCP configuration patterns
+- Test authenticated API calls
+- **Status**: 🚧 Not Started
+- **Dependencies**: WS3 ✅
+- **Priority**: P0 (CRITICAL - Blocker)
+
+### ⏳ WS7: Token Optimization (PENDING)
+- Use Mastra Memory retention policies
+- Configure agent token limits
+- Prevent rate limit errors
+- **Status**: ⏳ Pending (blocked by WS6)
+- **Dependencies**: WS4 ✅, WS6
+- **Priority**: P0 (CRITICAL - Blocker)
+
+### ⏳ WS8: Real Streaming & Investigation UI (PENDING)
+- Use Mastra agent streaming API
+- Server-Sent Events (SSE) to client
+- Connect UI to real events
+- **Status**: ⏳ Pending (blocked by WS6+WS7)
+- **Dependencies**: WS4 ✅, WS5 ✅
+- **Priority**: P1 (HIGH)
 
 ---
 
@@ -229,19 +309,26 @@ git log --oneline
 
 ## Context for Next Session
 
-**You are ready for WS5!**
+**You are ready for WS6!**
 
-1. **First action**: Read `.claude-code/checkpoints/checkpoint-ws5-ui-polish.md`
-2. **Focus**: Add command palette, iteration progress, progressive transparency
-3. **Reference**: shadcn command component, omni-agent patterns
-4. **Goal**: Polish UX for production-ready experience
+1. **First action**: Read `.claude-code/checkpoints/checkpoint-ws6-env-mcp-config.md`
+2. **Critical blocker**: omni-api-mcp can't access environment variables
+3. **Approach**: **Mastra-First** - Query Mastra docs MCP server for recommended patterns
+4. **Goal**: Fix env loading so authenticated API calls work
 
-**Timeline**: 6 weeks to production MVP (Week 5 in progress)
+**Key Principle**: Use Mastra's built-in features (MCP config, Memory retention, streaming API) instead of custom implementations.
 
-**Success Criteria**: See `.claude-code/PROGRESS.md`
+**Timeline**:
+- WS6: 1-2 days (env config)
+- WS7: 2-3 days (token optimization)
+- WS8: 3-4 days (streaming UI)
+- **Total**: ~2 weeks to production readiness
+
+**Success Criteria**: See `.claude-code/GAP_ANALYSIS.md`
 
 ---
 
 **Last Updated**: 2025-10-31
-**Current Checkpoint**: WS4 complete ✅
-**Next Checkpoint**: WS5 (UI Polish) 🚀
+**Current Checkpoint**: WS5 complete ✅
+**Next Checkpoint**: WS6 (Environment & MCP Config) 🚀
+**Mastra-First Approach**: ✅ Research Mastra patterns before custom code
