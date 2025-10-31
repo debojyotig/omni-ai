@@ -1,10 +1,9 @@
 /**
  * Standard Mastra Providers (OpenAI, Anthropic)
  *
- * These providers use Mastra's built-in support with API keys.
+ * Mastra uses AI SDK v5 providers internally.
+ * We just return model string format for Mastra to instantiate.
  */
-
-import { Anthropic, OpenAI } from '@mastra/core'
 
 export interface ModelConfig {
   id: string
@@ -14,23 +13,19 @@ export interface ModelConfig {
 }
 
 /**
- * Initialize standard providers with API keys
+ * Get standard provider model strings for Mastra
+ * Mastra instantiates providers from environment variables (OPENAI_API_KEY, ANTHROPIC_API_KEY)
  */
 export function createStandardProviders() {
-  const providers: Record<string, any> = {}
+  const providers: Record<string, string> = {}
 
-  // OpenAI Provider
+  // Return provider identifiers - Mastra handles instantiation
   if (process.env.OPENAI_API_KEY) {
-    providers.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    })
+    providers.openai = 'openai'
   }
 
-  // Anthropic Provider
   if (process.env.ANTHROPIC_API_KEY) {
-    providers.anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY
-    })
+    providers.anthropic = 'anthropic'
   }
 
   return providers

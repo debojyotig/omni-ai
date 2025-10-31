@@ -1,20 +1,19 @@
 /**
  * Custom OAuth2 Providers (Azure, AWS, GCP)
  *
- * These providers use OAuth2 client credentials flow for authentication.
- * Each provider wraps the base Mastra provider with OAuth2 token management.
+ * NOTE: These providers are placeholders for future OAuth2 implementation.
+ * Currently not in use - standard providers (OpenAI, Anthropic) work via env vars.
  */
 
-import { OpenAI } from '@mastra/core'
 import { oauth2Gateway, type OAuth2Config } from '@/lib/auth/oauth2-gateway'
 import type { ModelConfig } from './standard-providers'
 
 /**
- * Azure OpenAI Provider
- * Uses OAuth2 for authentication instead of API key
+ * Azure OpenAI Provider (Placeholder)
+ * Future: OAuth2 authentication
  */
 export class AzureOpenAIProvider {
-  private provider: OpenAI | null = null
+  private provider: any = null
   private readonly providerId = 'azure-openai'
 
   constructor(config?: {
@@ -40,16 +39,15 @@ export class AzureOpenAIProvider {
 
   /**
    * Get provider instance with OAuth2 token
+   * NOTE: Placeholder - not currently functional
    */
-  async getProvider(): Promise<OpenAI> {
+  async getProvider(): Promise<any> {
+    // TODO: Implement with AI SDK v5 providers
     // Get fresh OAuth2 token
     const token = await oauth2Gateway.getToken(this.providerId)
 
-    // Create or update provider with token
-    this.provider = new OpenAI({
-      apiKey: token, // Use OAuth2 token as API key
-      baseURL: process.env.AZURE_OPENAI_ENDPOINT
-    })
+    // Future: Create provider with token
+    // this.provider = createAzureOpenAI({ token, baseURL: ... })
 
     return this.provider
   }

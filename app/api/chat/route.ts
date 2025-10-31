@@ -35,6 +35,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Debug: Check if API key is loaded
+    console.log('[DEBUG] Environment check:', {
+      provider,
+      model,
+      hasAnthropicKey: !!process.env.ANTHROPIC_API_KEY,
+      keyPrefix: process.env.ANTHROPIC_API_KEY?.substring(0, 15) || 'NOT_SET'
+    });
+
     // Select agent based on type
     let selectedAgent;
     const agentType = (agent || 'smart') as AgentType;
@@ -42,14 +50,14 @@ export async function POST(req: NextRequest) {
     try {
       switch (agentType) {
         case 'datadog':
-          selectedAgent = createDataDogChampion(provider, model);
+          selectedAgent = await createDataDogChampion(provider, model);
           break;
         case 'correlator':
-          selectedAgent = createAPICorrelator(provider, model);
+          selectedAgent = await createAPICorrelator(provider, model);
           break;
         case 'smart':
         default:
-          selectedAgent = createSmartAgent(provider, model);
+          selectedAgent = await createSmartAgent(provider, model);
       }
     } catch (error) {
       console.error('Agent creation error:', error);
@@ -64,10 +72,14 @@ export async function POST(req: NextRequest) {
 
     // Generate response with Mastra memory
     // Memory automatically loads conversation history from storage
-    const result = await selectedAgent.generate({
-      messages: [{ role: 'user', content: message }],
-      threadId: threadId || 'default',
-    });
+    // resourceId identifies the user, threadId identifies the conversation
+    const result = await selectedAgent.generate(
+      [{ role: 'user', content: message }],
+      {
+        threadId: threadId || 'default',
+        resourceId: 'default-user', // In production, this would be the actual user ID
+      }
+    );
 
     return NextResponse.json({
       success: true,

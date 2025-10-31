@@ -30,6 +30,7 @@ export function ActivityBar() {
             `}
             title={item.label}
             aria-label={item.label}
+            aria-pressed={activeView === item.id}
           >
             <Icon className="w-5 h-5" />
           </button>

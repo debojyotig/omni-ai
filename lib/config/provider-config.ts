@@ -87,20 +87,38 @@ export const MODELS: Record<string, ModelConfig[]> = {
   ],
   anthropic: [
     {
-      id: 'claude-3-5-sonnet-20241022',
-      name: 'Claude 3.5 Sonnet',
+      id: 'claude-sonnet-4-5-20250929',
+      name: 'Claude Sonnet 4.5 (Latest)',
       provider: 'anthropic',
       maxTokens: 200000
     },
     {
-      id: 'claude-3-5-haiku-20241022',
-      name: 'Claude 3.5 Haiku',
+      id: 'claude-opus-4-1-20250805',
+      name: 'Claude Opus 4.1',
+      provider: 'anthropic',
+      maxTokens: 200000
+    },
+    {
+      id: 'claude-haiku-4-5-20251001',
+      name: 'Claude Haiku 4.5',
+      provider: 'anthropic',
+      maxTokens: 200000
+    },
+    {
+      id: 'claude-3-7-sonnet-20250219',
+      name: 'Claude 3.7 Sonnet',
       provider: 'anthropic',
       maxTokens: 200000
     },
     {
       id: 'claude-3-opus-20240229',
       name: 'Claude 3 Opus',
+      provider: 'anthropic',
+      maxTokens: 200000
+    },
+    {
+      id: 'claude-3-haiku-20240307',
+      name: 'Claude 3 Haiku',
       provider: 'anthropic',
       maxTokens: 200000
     }

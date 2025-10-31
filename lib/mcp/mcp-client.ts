@@ -1,19 +1,17 @@
 import { MCPClient } from '@mastra/mcp'
-import { spawn, ChildProcess } from 'child_process'
 
 /**
  * MCP Client Manager for omni-api-mcp
  *
- * Manages connection to omni-api-mcp server process via MCP protocol.
+ * Manages connection to omni-api-mcp server via MCP protocol.
  * Provides tool discovery and execution capabilities.
  */
 export class OmniAPIMCPClient {
   private client: MCPClient | null = null
-  private serverProcess: ChildProcess | null = null
   private isConnecting = false
 
   /**
-   * Start omni-api-mcp server and connect
+   * Connect to omni-api-mcp server
    */
   async connect(): Promise<void> {
     if (this.client) {
@@ -33,45 +31,23 @@ export class OmniAPIMCPClient {
     try {
       const mcpServerPath = process.env.OMNI_API_MCP_PATH || '../omni-api-mcp/dist/index.js'
 
-      console.log(`[omni-api-mcp] Starting server at: ${mcpServerPath}`)
+      console.log(`[omni-api-mcp] Configuring MCP client for: ${mcpServerPath}`)
 
-      // Start omni-api-mcp as subprocess
-      this.serverProcess = spawn('node', [mcpServerPath], {
-        stdio: ['pipe', 'pipe', 'pipe']
-      })
-
-      // Handle server errors
-      this.serverProcess.stderr?.on('data', (data: Buffer) => {
-        console.error(`[omni-api-mcp] ${data.toString()}`)
-      })
-
-      this.serverProcess.on('error', (error: Error) => {
-        console.error('[omni-api-mcp] Process error:', error)
-      })
-
-      this.serverProcess.on('exit', (code: number | null) => {
-        console.log(`[omni-api-mcp] Process exited with code ${code}`)
-        this.client = null
-        this.serverProcess = null
-      })
-
-      // Create MCP client
+      // Create MCP client using Mastra's MCPClient API
       this.client = new MCPClient({
-        stdin: this.serverProcess.stdin!,
-        stdout: this.serverProcess.stdout!
+        id: 'omni-api-mcp',
+        servers: {
+          'omni-api': {
+            command: 'node',
+            args: [mcpServerPath],
+          },
+        },
       })
 
-      // Initialize connection
-      await this.client.connect()
-
-      console.log('[omni-api-mcp] Connected successfully')
+      console.log('[omni-api-mcp] MCP client configured successfully')
     } catch (error) {
-      console.error('[omni-api-mcp] Connection failed:', error)
+      console.error('[omni-api-mcp] Configuration failed:', error)
       this.client = null
-      if (this.serverProcess) {
-        this.serverProcess.kill()
-        this.serverProcess = null
-      }
       throw error
     } finally {
       this.isConnecting = false
@@ -79,28 +55,14 @@ export class OmniAPIMCPClient {
   }
 
   /**
-   * Get list of available MCP tools
+   * Get all tools from MCP servers as Mastra tools
    */
   async getTools() {
     if (!this.client) {
       throw new Error('MCP client not connected. Call connect() first.')
     }
 
-    return await this.client.listTools()
-  }
-
-  /**
-   * Call MCP tool
-   */
-  async callTool(name: string, arguments_: Record<string, any>) {
-    if (!this.client) {
-      throw new Error('MCP client not connected. Call connect() first.')
-    }
-
-    return await this.client.callTool({
-      name,
-      arguments: arguments_
-    })
+    return await this.client.getTools()
   }
 
   /**
@@ -114,11 +76,6 @@ export class OmniAPIMCPClient {
         console.error('[omni-api-mcp] Disconnect error:', error)
       }
       this.client = null
-    }
-
-    if (this.serverProcess) {
-      this.serverProcess.kill()
-      this.serverProcess = null
     }
 
     console.log('[omni-api-mcp] Disconnected')
