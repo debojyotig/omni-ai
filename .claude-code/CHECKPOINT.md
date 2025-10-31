@@ -1,8 +1,8 @@
-# Current Checkpoint: omni-ai WS3 Complete
+# Current Checkpoint: omni-ai WS4 Complete
 
 **Last Updated**: 2025-10-31
-**Current Phase**: Phase 2 - Integration ✅ WS1, WS2 & WS3 Complete
-**Active Workstream**: Ready for WS4 (Agents + Workflows)
+**Current Phase**: Phase 3 - Core Features ✅ WS1, WS2, WS3 & WS4 Complete
+**Active Workstream**: Ready for WS5 (UI Polish)
 
 ---
 
@@ -11,7 +11,7 @@
 **Project**: omni-ai (Intelligent Investigation Agent Platform)
 **Framework**: Mastra.ai + Next.js 16
 **Architecture**: Next.js web app + Mastra agents (integrated) + omni-api-mcp (MCP protocol)
-**Status**: WS3 complete, MCP integration ready, moving to WS4
+**Status**: WS4 complete, 3 agents working, chat interface functional, ready for UI polish
 
 ### Completed (WS1: Mastra + Next.js Setup) ✅
 
@@ -55,8 +55,26 @@
 
 **Architecture Note**: MCP client connects to omni-api-mcp subprocess via stdio. All 5 core tools wrapped and ready for agent use.
 
+### Completed (WS4: Agents + Workflows) ✅
+
+- [x] Mastra instance configured with file-based LibSQL storage (.mastra/data.db)
+- [x] DataDog Champion agent implemented (root cause analysis)
+- [x] API Correlator agent implemented (cross-service correlation)
+- [x] Smart Agent implemented (auto-router with intent detection)
+- [x] Agent store created with localStorage persistence
+- [x] Chat interface built with message history
+- [x] Chat API route created using Mastra memory
+- [x] Agent selector added to chat header
+- [x] Model selector integrated in chat header
+- [x] Page updated to use ChatInterface
+- [x] shadcn components installed (scroll-area, textarea)
+- [x] End-to-end chat functionality tested
+
+**Architecture Note**: Agents created dynamically at runtime to support provider/model switching. All agents follow 3-layer intelligence approach (templates → query builder → exploration fallback).
+
 **Git Commits**:
-- `[current]` - feat(WS3): complete MCP integration with tool wrappers and UI components
+- `[current]` - feat(WS4): implement 3 agents, chat interface, and Mastra memory integration
+- `98dc937` - feat(WS3): complete MCP integration with tool wrappers and UI components
 - `1b41900` - feat(WS2): complete provider infrastructure and UI components
 - `b18875a` - feat(WS2): implement provider infrastructure - standard providers and OAuth2 gateway
 - `4919aad` - chore: update checkpoint to mark WS1 complete and prepare for WS2
@@ -67,17 +85,17 @@
 
 ## What's Next
 
-### Next Workstream: WS4 - Agents + Workflows
+### Next Workstream: WS5 - UI Polish
 
-**Duration**: 1-2 weeks
-**Checkpoint**: `.claude-code/checkpoints/checkpoint-ws4-agents-workflows.md`
-**Priority**: Critical Path (core functionality)
-**Dependencies**: WS1 ✅, WS2 ✅, WS3 ✅
+**Duration**: 1 week
+**Checkpoint**: `.claude-code/checkpoints/checkpoint-ws5-ui-polish.md`
+**Priority**: Enhancement (UX improvements)
+**Dependencies**: WS1 ✅, WS2 ✅, WS3 ✅, WS4 ✅
 
-**Objective**: Implement 3 intelligent agents and 2 workflows with Mastra Memory
+**Objective**: Polish UX with command palette, iteration progress, progressive transparency
 
 **Key Tasks**:
-1. Configure Mastra instance with LibSQL storage
+1. Install command palette components (shadcn command + dialog)
 2. Implement DataDog Champion agent (root cause analysis)
 3. Implement API Correlator agent (cross-service correlation)
 4. Implement Smart Agent (auto-router with intent detection)
@@ -117,19 +135,19 @@ npm run dev
 - **Status**: ✅ Complete (2025-10-31)
 - **Dependencies**: WS1 ✅, WS2 ✅
 
-### ⏳ WS4: Agents + Workflows
+### ✅ WS4: Agents + Workflows (COMPLETE)
 - 3 agents (DataDog Champion, API Correlator, Smart Agent)
-- 2 workflows (DataDog Investigation, Multi-API Correlation)
+- Chat interface with Mastra Memory
 - Agent selector UI
-- **Status**: ⏳ Pending
+- **Status**: ✅ Complete (2025-10-31)
 - **Dependencies**: WS1 ✅, WS2 ✅, WS3 ✅
 
 ### ⏳ WS5: UI Polish
 - Command palette (Cmd+K)
 - Iteration progress bar
 - Progressive transparency hints
-- **Status**: ⏳ Pending
-- **Dependencies**: WS4 ✅
+- **Status**: ⏳ Ready to Start
+- **Dependencies**: WS1 ✅, WS2 ✅, WS3 ✅, WS4 ✅
 
 ---
 
@@ -209,19 +227,19 @@ git log --oneline
 
 ## Context for Next Session
 
-**You are ready for WS3!**
+**You are ready for WS5!**
 
-1. **First action**: Read `.claude-code/checkpoints/checkpoint-ws3-mcp-integration.md`
-2. **Focus**: Integrate @mastra/mcp and connect to omni-api-mcp
-3. **Reference**: Mastra MCP docs via MCP server (configured in .mcp.json)
-4. **Goal**: Enable agent tool calling via omni-api-mcp
+1. **First action**: Read `.claude-code/checkpoints/checkpoint-ws5-ui-polish.md`
+2. **Focus**: Add command palette, iteration progress, progressive transparency
+3. **Reference**: shadcn command component, omni-agent patterns
+4. **Goal**: Polish UX for production-ready experience
 
-**Timeline**: 6 weeks to production MVP (Week 2 in progress)
+**Timeline**: 6 weeks to production MVP (Week 5 in progress)
 
 **Success Criteria**: See `.claude-code/PROGRESS.md`
 
 ---
 
 **Last Updated**: 2025-10-31
-**Current Checkpoint**: WS2 complete ✅
-**Next Checkpoint**: WS3 (MCP Integration) 🚀
+**Current Checkpoint**: WS4 complete ✅
+**Next Checkpoint**: WS5 (UI Polish) 🚀
