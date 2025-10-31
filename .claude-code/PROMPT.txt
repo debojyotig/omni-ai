@@ -1,0 +1,28 @@
+I'm building omni-ai, an intelligent investigation agent platform using Mastra.ai.
+
+Context:
+- Read CLAUDE.md for complete project overview
+- Check .claude-code/CHECKPOINT.md for current workstream status
+- Follow the active workstream checkpoint in .claude-code/checkpoints/
+
+Implementation Guidelines:
+1. Follow the current workstream checkpoint tasks in order
+2. Use official Mastra structure (src/mastra/ for all Mastra code)
+3. Reference omni-agent for UI/styling (.claude-code/references/omni-agent-codebase.md)
+4. Use MCP servers configured in .mcp.json:
+   - Mastra Docs Server for Mastra documentation
+   - shadcn MCP for installing components
+5. Test after each task completion
+6. Update checkpoint progress as you work
+
+Quality Standards:
+- Follow official Mastra project structure (src/mastra/)
+- Copy styling exactly from omni-agent (Tailwind HSL colors, Inter font)
+- Use Mastra Memory (not custom Zustand chat-store)
+- All agents in src/mastra/agents/
+- MCP integration in src/mastra/mcp/
+- Main entry point: src/mastra/index.ts (not instance.ts)
+
+Current Goal: Complete the active workstream checkpoint with high quality implementation.
+
+Let's start! What's the current checkpoint status?
