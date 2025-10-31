@@ -40,6 +40,7 @@ export class OmniAPIMCPClient {
           'omni-api': {
             command: 'node',
             args: [mcpServerPath],
+            env: process.env as Record<string, string>, // Pass environment variables to subprocess
           },
         },
       })

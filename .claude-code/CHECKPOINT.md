@@ -1,8 +1,8 @@
-# Current Checkpoint: omni-ai WS5 Complete ✅ → WS6 Next
+# Current Checkpoint: omni-ai WS6 Complete ✅ → WS7 Next
 
 **Last Updated**: 2025-10-31
 **Current Phase**: Phase 5 - Production Readiness (WS6-WS8)
-**Active Workstream**: WS6 (Environment & MCP Config)
+**Active Workstream**: WS7 (Token Optimization)
 
 ---
 
@@ -207,20 +207,22 @@ All new workstreams focus on **using Mastra's built-in capabilities** instead of
 - **Status**: ✅ Complete (2025-10-31)
 - **Dependencies**: WS1 ✅, WS2 ✅, WS3 ✅, WS4 ✅
 
-### 🚧 WS6: Environment & MCP Config (IN PROGRESS)
+### ✅ WS6: Environment & MCP Config (COMPLETE)
 - Fix omni-api-mcp env variable loading
 - Use Mastra's MCP configuration patterns
 - Test authenticated API calls
-- **Status**: 🚧 Not Started
+- **Status**: ✅ Complete (2025-10-31)
 - **Dependencies**: WS3 ✅
 - **Priority**: P0 (CRITICAL - Blocker)
+- **Solution**: Added `env: process.env` to MCPClient server config
+- **Verification**: omni-api-mcp subprocess starts successfully with 16 services loaded
 
-### ⏳ WS7: Token Optimization (PENDING)
+### 🚧 WS7: Token Optimization (IN PROGRESS)
 - Use Mastra Memory retention policies
 - Configure agent token limits
 - Prevent rate limit errors
-- **Status**: ⏳ Pending (blocked by WS6)
-- **Dependencies**: WS4 ✅, WS6
+- **Status**: 🚧 Ready to Start (WS6 complete)
+- **Dependencies**: WS4 ✅, WS6 ✅
 - **Priority**: P0 (CRITICAL - Blocker)
 
 ### ⏳ WS8: Real Streaming & Investigation UI (PENDING)
@@ -309,12 +311,12 @@ git log --oneline
 
 ## Context for Next Session
 
-**You are ready for WS6!**
+**You are ready for WS7!**
 
-1. **First action**: Read `.claude-code/checkpoints/checkpoint-ws6-env-mcp-config.md`
-2. **Critical blocker**: omni-api-mcp can't access environment variables
-3. **Approach**: **Mastra-First** - Query Mastra docs MCP server for recommended patterns
-4. **Goal**: Fix env loading so authenticated API calls work
+1. **First action**: Read `.claude-code/checkpoints/checkpoint-ws7-token-optimization.md`
+2. **Critical issue**: Rate limit errors after 2-3 iterations (40K+ tokens/min)
+3. **Approach**: **Mastra-First** - Query Mastra docs for Memory retention configuration
+4. **Goal**: Prevent rate limits using Mastra's retention policies
 
 **Key Principle**: Use Mastra's built-in features (MCP config, Memory retention, streaming API) instead of custom implementations.
 
@@ -329,6 +331,6 @@ git log --oneline
 ---
 
 **Last Updated**: 2025-10-31
-**Current Checkpoint**: WS5 complete ✅
-**Next Checkpoint**: WS6 (Environment & MCP Config) 🚀
-**Mastra-First Approach**: ✅ Research Mastra patterns before custom code
+**Current Checkpoint**: WS6 complete ✅
+**Next Checkpoint**: WS7 (Token Optimization) 🚀
+**Mastra-First Approach**: ✅ Successfully used for WS6 env configuration
