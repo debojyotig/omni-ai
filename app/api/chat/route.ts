@@ -10,6 +10,7 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 import { mcpServers } from '@/lib/mcp/claude-sdk-mcp-config';
 import { subAgentConfigs } from '@/lib/agents/subagent-configs';
 import { withHallucinationReduction } from '@/lib/agents/hallucination-reduction';
+import { getAnthropicConfig } from '@/lib/config/server-provider-config';
 import type { AgentType } from '@/lib/stores/agent-store';
 
 /**
@@ -93,6 +94,17 @@ export async function POST(req: NextRequest) {
     const agentConfig = getAgentConfiguration(agentType);
 
     console.log(`[CHAT] Agent: ${agentConfig.description}, Thread: ${threadId || 'new'}`);
+
+    // Configure provider (sets ANTHROPIC_API_KEY and ANTHROPIC_BASE_URL)
+    const providerConfig = getAnthropicConfig();
+    process.env.ANTHROPIC_API_KEY = providerConfig.apiKey;
+    if (providerConfig.baseURL) {
+      process.env.ANTHROPIC_BASE_URL = providerConfig.baseURL;
+      console.log(`[CHAT] Using gateway: ${providerConfig.baseURL}`);
+    } else {
+      delete process.env.ANTHROPIC_BASE_URL; // Use default Anthropic API
+      console.log('[CHAT] Using direct Anthropic API');
+    }
 
     // Execute query with Claude SDK
     const result = query({

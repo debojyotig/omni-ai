@@ -1,46 +1,69 @@
 /**
- * Settings Panel
+ * Settings Panel (WS10: Enterprise Gateway)
  *
- * Provides UI for selecting LLM providers and models.
- * Supports both standard (OpenAI, Anthropic) and custom OAuth2 providers (Azure, AWS, GCP).
- * Includes Agent Config tab for dynamic token/temperature/iteration settings.
+ * Displays current provider configuration (READ-ONLY).
+ * Provider changes require app restart.
  */
 
 'use client'
 
-import { useEffect } from 'react'
-import { useProviderStore } from '@/lib/stores/provider-store'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { useEffect, useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { CheckCircle2, XCircle, Info, AlertTriangle } from 'lucide-react'
 import { AgentConfigTab } from '@/components/agent-config-tab'
 
+interface ProviderInfo {
+  id: string
+  name: string
+  models: string[]
+  valid: boolean
+}
+
+interface AvailableProvider {
+  id: string
+  name: string
+  configured: boolean
+}
+
+interface ProviderData {
+  current: ProviderInfo
+  available: AvailableProvider[]
+  validation: {
+    valid: boolean
+    errors: string[]
+  }
+  message: string
+}
+
 export function SettingsPanel() {
-  const {
-    selectedProviderId,
-    selectedModelId,
-    setProvider,
-    setModel,
-    initializeDefaults,
-    getAvailableProviders,
-    getAvailableModels,
-    isReady
-  } = useProviderStore()
+  const [providerData, setProviderData] = useState<ProviderData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Initialize defaults on mount
+  // Fetch provider info on mount
   useEffect(() => {
-    initializeDefaults()
-  }, [initializeDefaults])
+    fetchProviderInfo()
+  }, [])
 
-  const availableProviders = getAvailableProviders()
-  const availableModels = getAvailableModels()
+  async function fetchProviderInfo() {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await fetch('/api/provider')
+      if (!response.ok) {
+        throw new Error('Failed to fetch provider info')
+      }
+      const data = await response.json()
+      setProviderData(data)
+    } catch (err: any) {
+      setError(err.message || 'Failed to load provider configuration')
+      console.error('[SETTINGS] Error fetching provider info:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="h-full overflow-auto">
@@ -49,32 +72,50 @@ export function SettingsPanel() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Settings</h1>
           <p className="text-muted-foreground">
-            Configure your LLM provider, model, and agent behavior
+            View provider configuration and manage agent behavior
           </p>
         </div>
 
-        {/* Status Indicator */}
-        <div className="mb-8 p-4 rounded-lg border bg-card">
-          <div className="flex items-center gap-2">
-            {isReady() ? (
-              <>
-                <CheckCircle2 className="w-5 h-5 text-green-500" />
-                <span className="font-medium">Ready</span>
-                <span className="text-muted-foreground">
-                  · {selectedProviderId} · {selectedModelId}
-                </span>
-              </>
-            ) : (
-              <>
-                <XCircle className="w-5 h-5 text-yellow-500" />
-                <span className="font-medium">Not Configured</span>
-                <span className="text-muted-foreground">
-                  · Select a provider and model to get started
-                </span>
-              </>
-            )}
+        {/* Loading State */}
+        {loading && (
+          <div className="mb-8 p-4 rounded-lg border bg-card">
+            <p className="text-muted-foreground">Loading provider information...</p>
           </div>
-        </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <Alert variant="destructive" className="mb-8">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Status Indicator */}
+        {!loading && !error && providerData && (
+          <div className="mb-8 p-4 rounded-lg border bg-card">
+            <div className="flex items-center gap-2">
+              {providerData.validation.valid ? (
+                <>
+                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  <span className="font-medium">Provider Configured</span>
+                  <span className="text-muted-foreground">
+                    · {providerData.current.name}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-5 h-5 text-yellow-500" />
+                  <span className="font-medium">Configuration Error</span>
+                  <span className="text-muted-foreground">
+                    · Check environment variables
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <Tabs defaultValue="provider" className="w-full">
@@ -85,108 +126,151 @@ export function SettingsPanel() {
 
           {/* Provider & Model Tab */}
           <TabsContent value="provider" className="space-y-6 mt-6">
-            {/* Provider Selection */}
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <Label htmlFor="provider-select" className="text-base">
-                  Provider
-                </Label>
-                <Select
-                  value={selectedProviderId || undefined}
-                  onValueChange={setProvider}
-                >
-                  <SelectTrigger id="provider-select" className="w-full">
-                    <SelectValue placeholder="Select a provider" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableProviders.map((provider) => (
-                      <SelectItem key={provider.id} value={provider.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{provider.name}</span>
+            {!loading && !error && providerData && (
+              <>
+                {/* Current Provider (Read-Only) */}
+                <div className="space-y-3">
+                  <Label className="text-base">Current Provider</Label>
+                  <div className="p-4 rounded-lg border bg-muted/50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">{providerData.current.name}</div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          Provider ID: {providerData.current.id}
+                        </div>
+                      </div>
+                      {providerData.validation.valid ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-500" />
+                      ) : (
+                        <XCircle className="w-5 h-5 text-yellow-500" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Validation Errors */}
+                {!providerData.validation.valid && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Configuration Issues</AlertTitle>
+                    <AlertDescription>
+                      <ul className="list-disc list-inside space-y-1 mt-2">
+                        {providerData.validation.errors.map((err, idx) => (
+                          <li key={idx}>{err}</li>
+                        ))}
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Available Models */}
+                <div className="space-y-3">
+                  <Label className="text-base">Available Models</Label>
+                  <div className="p-4 rounded-lg border bg-muted/50">
+                    <div className="space-y-2 text-sm">
+                      {providerData.current.models.map((model) => (
+                        <div key={model} className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          <span className="font-mono">{model}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* How to Change Provider */}
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Changing Providers</AlertTitle>
+                  <AlertDescription>
+                    <div className="space-y-2 mt-2">
+                      <p>
+                        To change providers, update <code className="px-1 py-0.5 rounded bg-muted">SELECTED_PROVIDER</code> in{' '}
+                        <code className="px-1 py-0.5 rounded bg-muted">.env.local</code> and restart the application.
+                      </p>
+                      <div className="mt-3 space-y-1 text-xs font-mono bg-muted p-3 rounded">
+                        <div># Set one of: anthropic, azure, aws, gcp</div>
+                        <div>SELECTED_PROVIDER=anthropic</div>
+                      </div>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+
+                {/* Available Providers List */}
+                <div className="space-y-3">
+                  <Label className="text-base">Available Providers</Label>
+                  <div className="p-4 rounded-lg border bg-muted/50">
+                    <div className="space-y-3">
+                      {providerData.available.map((provider) => (
+                        <div
+                          key={provider.id}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-2">
+                            {provider.configured ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <XCircle className="w-4 h-4 text-muted-foreground" />
+                            )}
+                            <span
+                              className={
+                                provider.configured
+                                  ? 'font-medium'
+                                  : 'text-muted-foreground'
+                              }
+                            >
+                              {provider.name}
+                            </span>
+                          </div>
                           <span className="text-xs text-muted-foreground">
-                            ({provider.type})
+                            {provider.configured ? 'Configured' : 'Not configured'}
                           </span>
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {availableProviders.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    No providers configured. Add API keys to .env.local
-                  </p>
-                )}
-              </div>
-
-              {/* Model Selection */}
-              <div className="space-y-3">
-                <Label htmlFor="model-select" className="text-base">
-                  Model
-                </Label>
-                <Select
-                  value={selectedModelId || undefined}
-                  onValueChange={setModel}
-                  disabled={
-                    !selectedProviderId || availableModels.length === 0
-                  }
-                >
-                  <SelectTrigger id="model-select" className="w-full">
-                    <SelectValue placeholder="Select a model" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableModels.map((model) => (
-                      <SelectItem key={model.id} value={model.id}>
-                        {model.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedProviderId && availableModels.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    No models available for this provider
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Provider Information */}
-            <div className="mt-8 p-4 rounded-lg border bg-muted/50">
-              <h3 className="font-medium mb-2">Available Providers</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Standard:</span>
-                  <span className="text-muted-foreground">
-                    OpenAI, Anthropic (via Mastra)
-                  </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Enterprise:</span>
-                  <span className="text-muted-foreground">
-                    Azure OpenAI, AWS Bedrock, GCP Vertex (OAuth2)
-                  </span>
-                </div>
-              </div>
-            </div>
 
-            {/* Environment Variables Info */}
-            <div className="mt-4 p-4 rounded-lg border bg-muted/50">
-              <h3 className="font-medium mb-2">Configuration</h3>
-              <p className="text-sm text-muted-foreground mb-2">
-                Add these environment variables to{' '}
-                <code className="px-1 py-0.5 rounded bg-muted">
-                  .env.local
-                </code>
-                :
-              </p>
-              <div className="space-y-1 text-xs font-mono text-muted-foreground">
-                <div>OPENAI_API_KEY=sk-...</div>
-                <div>ANTHROPIC_API_KEY=sk-ant-...</div>
-                <div>AZURE_OPENAI_ENDPOINT=https://...</div>
-                <div>AZURE_TOKEN_ENDPOINT=https://...</div>
-                <div>AZURE_CLIENT_ID=...</div>
-                <div>AZURE_CLIENT_SECRET=...</div>
-              </div>
-            </div>
+                {/* Configuration Guide */}
+                <div className="p-4 rounded-lg border bg-muted/50">
+                  <h3 className="font-medium mb-2">Environment Variables</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Configure providers in{' '}
+                    <code className="px-1 py-0.5 rounded bg-muted">.env.local</code>:
+                  </p>
+                  <div className="space-y-3 text-xs font-mono">
+                    <div>
+                      <div className="text-muted-foreground mb-1"># Anthropic (Direct)</div>
+                      <div className="bg-muted p-2 rounded">ANTHROPIC_API_KEY=sk-ant-...</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground mb-1"># Azure via Gateway</div>
+                      <div className="bg-muted p-2 rounded space-y-0.5">
+                        <div>AZURE_GATEWAY_URL=https://gateway.company.com/azure</div>
+                        <div>AZURE_CLIENT_ID=...</div>
+                        <div>AZURE_CLIENT_SECRET=...</div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground mb-1"># AWS via Gateway</div>
+                      <div className="bg-muted p-2 rounded space-y-0.5">
+                        <div>AWS_GATEWAY_URL=https://gateway.company.com/aws</div>
+                        <div>AWS_ACCESS_KEY_ID=...</div>
+                        <div>AWS_SECRET_ACCESS_KEY=...</div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground mb-1"># GCP via Gateway</div>
+                      <div className="bg-muted p-2 rounded space-y-0.5">
+                        <div>GCP_GATEWAY_URL=https://gateway.company.com/gcp</div>
+                        <div>GCP_PROJECT_ID=...</div>
+                        <div>GCP_SERVICE_ACCOUNT_KEY=...</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </TabsContent>
 
           {/* Agent Config Tab */}
