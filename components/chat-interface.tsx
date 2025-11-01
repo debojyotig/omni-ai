@@ -1,8 +1,8 @@
 /**
- * Chat Interface
+ * Chat Interface (Claude Agent SDK)
  *
- * Main chat UI with message history and input.
- * Connects to Mastra agents via /api/chat endpoint.
+ * Main chat UI with real-time streaming via Server-Sent Events (SSE).
+ * Handles Claude SDK chunks and displays tool calls.
  */
 
 'use client';
@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAgentStore } from '@/lib/stores/agent-store';
-import { useProviderStore } from '@/lib/stores/provider-store';
 import { useProgressStore } from '@/lib/stores/progress-store';
 import { TransparencyHint } from '@/components/transparency-hint';
 
@@ -28,11 +27,12 @@ export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [streamingContent, setStreamingContent] = useState('');
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { selectedAgent } = useAgentStore();
-  const { selectedProviderId, selectedModelId } = useProviderStore();
   const { setRunning, setHint, reset: resetProgress } = useProgressStore();
 
   // Auto-scroll to bottom
@@ -40,7 +40,7 @@ export function ChatInterface() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, streamingContent]);
 
   const handleStop = () => {
     if (abortController) {
@@ -48,6 +48,7 @@ export function ChatInterface() {
       setAbortController(null);
       setIsLoading(false);
       setRunning(false);
+      setStreamingContent('');
       resetProgress();
     }
   };
@@ -63,49 +64,111 @@ export function ChatInterface() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
     setInput('');
     setIsLoading(true);
     setRunning(true);
+    setStreamingContent('');
 
     const controller = new AbortController();
     setAbortController(controller);
 
     try {
-      // Show progressive hints (simulated for now)
-      setHint('Analyzing your question...');
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      setHint('Connecting to agent...');
 
-      setHint('Preparing to query services...');
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      // Call API to generate response
+      // Call API with SSE streaming
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: input,
+          message: currentInput,
           agent: selectedAgent,
-          provider: selectedProviderId,
-          model: selectedModelId,
-          threadId: 'main', // Will use Mastra thread management
+          threadId: sessionId, // Resume session or undefined for new
         }),
         signal: controller.signal,
       });
 
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to get response');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get response');
       }
 
-      const assistantMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: data.response,
-        timestamp: Date.now(),
-      };
+      // Handle SSE stream
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let accumulatedText = '';
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      if (!reader) {
+        throw new Error('Response body is not readable');
+      }
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        // Decode chunk and add to buffer
+        buffer += decoder.decode(value, { stream: true });
+
+        // Process complete SSE messages (separated by \n\n)
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.trim() || !line.startsWith('data: ')) continue;
+
+          try {
+            const jsonStr = line.slice(6); // Remove 'data: ' prefix
+            const chunk = JSON.parse(jsonStr);
+
+            // Handle different chunk types
+            if (chunk.type === 'system' && chunk.subtype === 'init') {
+              // Save session ID for conversation continuity
+              if (chunk.session_id) {
+                setSessionId(chunk.session_id);
+              }
+              setHint('Agent initialized, processing query...');
+            } else if (chunk.type === 'assistant' && chunk.message?.content) {
+              // Extract text and tool calls from assistant message
+              const content = chunk.message.content;
+
+              // Look for text content
+              const textParts = content.filter((c: any) => c.type === 'text');
+              if (textParts.length > 0) {
+                const newText = textParts.map((t: any) => t.text).join('');
+                accumulatedText = newText;
+                setStreamingContent(newText);
+              }
+
+              // Look for tool uses
+              const toolUses = content.filter((c: any) => c.type === 'tool_use');
+              if (toolUses.length > 0) {
+                const toolNames = toolUses.map((t: any) => t.name.replace('mcp__omni-api__', '')).join(', ');
+                setHint(`Calling tools: ${toolNames}`);
+              }
+            } else if (chunk.type === 'result') {
+              // Final result received
+              setHint(null);
+            }
+          } catch (parseError) {
+            console.error('Failed to parse SSE chunk:', parseError);
+          }
+        }
+      }
+
+      // Add final assistant message
+      if (accumulatedText) {
+        const assistantMessage: Message = {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: accumulatedText,
+          timestamp: Date.now(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      }
     } catch (error: any) {
       if (error.name === 'AbortError') {
         console.log('Request aborted by user');
@@ -122,6 +185,7 @@ export function ChatInterface() {
     } finally {
       setIsLoading(false);
       setRunning(false);
+      setStreamingContent('');
       setHint(null);
       setAbortController(null);
       resetProgress();
@@ -165,7 +229,18 @@ export function ChatInterface() {
             </div>
           ))}
 
-          {isLoading && (
+          {/* Streaming message */}
+          {isLoading && streamingContent && (
+            <div className="flex justify-start">
+              <div className="max-w-[80%] bg-muted rounded-lg px-4 py-2">
+                <p className="whitespace-pre-wrap">{streamingContent}</p>
+                <span className="inline-block w-2 h-4 ml-1 bg-foreground/50 animate-pulse" />
+              </div>
+            </div>
+          )}
+
+          {/* Loading indicator */}
+          {isLoading && !streamingContent && (
             <div className="flex justify-start">
               <div className="bg-muted rounded-lg px-4 py-2 flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />

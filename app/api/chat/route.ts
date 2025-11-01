@@ -1,161 +1,148 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createDataDogChampion } from '@/src/mastra/agents/datadog-champion';
-import { createAPICorrelator } from '@/src/mastra/agents/api-correlator';
-import { createSmartAgent } from '@/src/mastra/agents/smart-agent';
-import { getAgentConfig } from '@/lib/stores/agent-config-store';
+/**
+ * Chat API Route (Claude Agent SDK)
+ *
+ * Handles chat requests using Claude Agent SDK with sub-agent delegation.
+ * Automatically routes to appropriate specialist based on query intent.
+ */
+
+import { NextRequest } from 'next/server';
+import { query } from '@anthropic-ai/claude-agent-sdk';
+import { mcpServers } from '@/lib/mcp/claude-sdk-mcp-config';
+import { subAgentConfigs } from '@/lib/agents/subagent-configs';
 import type { AgentType } from '@/lib/stores/agent-store';
 
 /**
- * Chat API Route
+ * Master Orchestrator Instructions
  *
- * Handles chat requests using selected agent with Mastra memory.
- * Agents are created on-demand with the specified provider, model, and dynamic config.
+ * The orchestrator analyzes user intent and automatically delegates to specialized sub-agents.
+ */
+const MASTER_ORCHESTRATOR_INSTRUCTIONS = `You are the Master Orchestrator for omni-ai, an intelligent investigation platform.
+
+Your role:
+1. Analyze user queries to understand intent
+2. Automatically delegate to appropriate sub-agents:
+   - datadog-champion: For error analysis, performance issues, service health
+   - api-correlator: For multi-API data correlation and consistency checks
+   - general-investigator: For API exploration and simple queries
+3. Coordinate responses from multiple sub-agents if needed
+4. Present unified results to the user
+
+Always explain which sub-agent you're delegating to and why.
+
+Example:
+User: "Why are we seeing 500 errors in payment-service?"
+You: "I'll delegate this to the DataDog Champion agent, which specializes in error analysis and root cause investigation."
+[Delegates to datadog-champion]
+
+User: "Compare user data from GitHub and DataDog"
+You: "I'll use the API Correlator agent to fetch and correlate data from both services."
+[Delegates to api-correlator]`;
+
+/**
+ * Map UI agent IDs to sub-agent configurations
+ */
+function getAgentConfiguration(agentType: AgentType) {
+  switch (agentType) {
+    case 'datadog':
+      return {
+        systemPrompt: `You are the DataDog Champion. ${subAgentConfigs['datadog-champion'].prompt}`,
+        agents: undefined, // No sub-delegation when specific agent selected
+        description: 'DataDog Champion (Root Cause Analysis)'
+      };
+
+    case 'correlator':
+      return {
+        systemPrompt: `You are the API Correlator. ${subAgentConfigs['api-correlator'].prompt}`,
+        agents: undefined, // No sub-delegation
+        description: 'API Correlator (Cross-Service Analysis)'
+      };
+
+    case 'smart':
+    default:
+      return {
+        systemPrompt: MASTER_ORCHESTRATOR_INSTRUCTIONS,
+        agents: subAgentConfigs, // Enable automatic delegation
+        description: 'Smart Agent (Auto-routing with sub-agents)'
+      };
+  }
+}
+
+/**
+ * POST /api/chat
+ *
+ * Handles chat messages with streaming support via Server-Sent Events (SSE)
  */
 export async function POST(req: NextRequest) {
   try {
-    const { message, agent, provider, model, threadId } = await req.json();
+    const { message, agent, threadId } = await req.json();
 
     // Validate inputs
     if (!message || !message.trim()) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Message is required',
-        },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ error: 'Message is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    if (!provider || !model) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Provider and model are required',
-        },
-        { status: 400 }
-      );
-    }
-
-    // Debug: Check if API key is loaded
-    console.log('[DEBUG] Environment check:', {
-      provider,
-      model,
-      hasAnthropicKey: !!process.env.ANTHROPIC_API_KEY,
-      keyPrefix: process.env.ANTHROPIC_API_KEY?.substring(0, 15) || 'NOT_SET'
-    });
-
-    // Load dynamic agent configuration for this provider/model
-    const agentConfig = getAgentConfig(provider, model);
-    console.log('[DEBUG] Agent config loaded:', {
-      provider,
-      model,
-      maxOutputTokens: agentConfig.maxOutputTokens,
-      temperature: agentConfig.temperature,
-      maxIterations: agentConfig.maxIterations
-    });
-
-    // Select agent based on type
-    let selectedAgent;
+    // Agent configuration
     const agentType = (agent || 'smart') as AgentType;
+    const agentConfig = getAgentConfiguration(agentType);
 
-    try {
-      switch (agentType) {
-        case 'datadog':
-          selectedAgent = await createDataDogChampion(provider, model, agentConfig);
-          break;
-        case 'correlator':
-          selectedAgent = await createAPICorrelator(provider, model, agentConfig);
-          break;
-        case 'smart':
-        default:
-          selectedAgent = await createSmartAgent(provider, model, agentConfig);
+    console.log(`[CHAT] Agent: ${agentConfig.description}, Thread: ${threadId || 'new'}`);
+
+    // Execute query with Claude SDK
+    const result = query({
+      prompt: message,
+      options: {
+        resume: threadId, // Resume existing conversation or undefined for new
+        systemPrompt: agentConfig.systemPrompt,
+        agents: agentConfig.agents,
+        mcpServers,
+        maxTurns: 10
       }
-    } catch (error) {
-      console.error('Agent creation error:', error);
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Failed to create agent: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        },
-        { status: 500 }
-      );
-    }
+    });
 
-    // Generate response with Mastra memory
-    // Memory automatically loads conversation history from storage
-    // resourceId identifies the user, threadId identifies the conversation
-    const threadIdValue = threadId || 'default';
+    // Stream response as Server-Sent Events
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of result) {
+            // Send each chunk as SSE
+            const data = `data: ${JSON.stringify(chunk)}\n\n`;
+            controller.enqueue(encoder.encode(data));
 
-    // Debug: Check memory state before generation
-    const memory = selectedAgent.memory;
-    if (memory) {
-      try {
-        const { messages } = await memory.query({
-          threadId: threadIdValue,
-          resourceId: 'default-user',
-        });
-        console.log(`[TOKEN-DEBUG] Thread: ${threadIdValue}, Message count before generation: ${messages.length}`);
-      } catch (err) {
-        console.log(`[TOKEN-DEBUG] Could not query memory (thread may not exist yet)`);
-      }
-    }
-
-    // WORKAROUND: Mastra bug - providerOptions in instructions aren't passed to AI SDK
-    // Pass system message with cacheControl as an array to avoid TokenLimiter issues
-    const systemInstructions = await selectedAgent.getInstructions();
-    const instructionContent = Array.isArray(systemInstructions)
-      ? systemInstructions.map(i => typeof i === 'string' ? i : i.content).join('\n\n')
-      : typeof systemInstructions === 'string'
-        ? systemInstructions
-        : systemInstructions.content;
-
-    const result = await selectedAgent.generate(
-      [{ role: 'user', content: message }],
-      {
-        memory: {
-          thread: threadIdValue,
-          resource: 'default-user', // In production, this would be the actual user ID
-        },
-        // CRITICAL: Override agent instructions to prevent duplication
-        instructions: '', // Empty to prevent Mastra from adding default instructions
-        // CRITICAL: Pass system as array with cacheControl to work around Mastra bug
-        system: [
-          {
-            role: 'system',
-            content: instructionContent,
-            providerOptions: {
-              anthropic: {
-                cacheControl: { type: 'ephemeral' }, // Cache for 5 minutes
-              },
-            },
+            // Log chunk types (debug)
+            if (chunk.type === 'system' && chunk.subtype === 'init') {
+              console.log(`[CHAT] Session: ${chunk.session_id}`);
+            } else if (chunk.type === 'assistant') {
+              const toolUses = chunk.message?.content?.filter((c: any) => c.type === 'tool_use') || [];
+              if (toolUses.length > 0) {
+                console.log(`[CHAT] Tools called: ${toolUses.map((t: any) => t.name).join(', ')}`);
+              }
+            }
           }
-        ] as any, // Type assertion needed due to Mastra types
-        // CRITICAL: Override max_tokens correctly in modelSettings
-        modelSettings: {
-          temperature: agentConfig.temperature,
-        },
-        providerOptions: {
-          anthropic: {
-            max_tokens: agentConfig.maxOutputTokens, // Override 64k default
-          },
-        },
-        // Note: maxSteps set in agent's defaultGenerateOptions
-      }
-    );
 
-    return NextResponse.json({
-      success: true,
-      response: result.text,
-      agent: agentType,
+          controller.close();
+        } catch (error) {
+          console.error('[CHAT] Stream error:', error);
+          controller.error(error);
+        }
+      }
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+      }
     });
   } catch (error: any) {
-    console.error('Chat API error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message || 'Internal server error',
-      },
-      { status: 500 }
+    console.error('[CHAT] Error:', error);
+    return new Response(
+      JSON.stringify({ error: error.message || 'Internal server error' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 }
