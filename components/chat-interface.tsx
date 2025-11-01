@@ -8,7 +8,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Send, Loader2, StopCircle } from 'lucide-react';
+import { Send, Loader2, StopCircle, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -23,17 +23,56 @@ interface Message {
   timestamp: number;
 }
 
+const STORAGE_KEY_THREAD = 'omni-ai-current-thread';
+const STORAGE_KEY_MESSAGES = 'omni-ai-current-messages';
+
 export function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    // Load messages from localStorage
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(STORAGE_KEY_MESSAGES);
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch {
+          return [];
+        }
+      }
+    }
+    return [];
+  });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const [abortController, setAbortController] = useState<AbortController | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [threadId, setThreadId] = useState<string>(() => {
+    // Load thread ID from localStorage or create new one
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(STORAGE_KEY_THREAD);
+      if (stored) {
+        return stored;
+      }
+    }
+    return `thread-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { selectedAgent } = useAgentStore();
   const { setRunning, setHint, reset: resetProgress } = useProgressStore();
+
+  // Persist threadId to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY_THREAD, threadId);
+    }
+  }, [threadId]);
+
+  // Persist messages to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY_MESSAGES, JSON.stringify(messages));
+    }
+  }, [messages]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -41,6 +80,21 @@ export function ChatInterface() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, streamingContent]);
+
+  const handleNewConversation = () => {
+    if (isLoading) return; // Don't allow starting new conversation while loading
+
+    // Generate new thread ID
+    const newThreadId = `thread-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    setThreadId(newThreadId);
+    setMessages([]);
+
+    // Clear localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY_THREAD, newThreadId);
+      localStorage.setItem(STORAGE_KEY_MESSAGES, '[]');
+    }
+  };
 
   const handleStop = () => {
     if (abortController) {
@@ -83,7 +137,8 @@ export function ChatInterface() {
         body: JSON.stringify({
           message: currentInput,
           agent: selectedAgent,
-          threadId: sessionId, // Resume session or undefined for new
+          threadId, // Persistent thread ID for this conversation
+          resourceId: 'default-user', // User identifier (can be enhanced later)
         }),
         signal: controller.signal,
       });
@@ -126,10 +181,7 @@ export function ChatInterface() {
 
             // Handle different chunk types
             if (chunk.type === 'system' && chunk.subtype === 'init') {
-              // Save session ID for conversation continuity
-              if (chunk.session_id) {
-                setSessionId(chunk.session_id);
-              }
+              // Session initialized (backend handles session mapping automatically)
               setHint('Agent initialized, processing query...');
             } else if (chunk.type === 'assistant' && chunk.message?.content) {
               // Extract text and tool calls from assistant message
@@ -194,6 +246,22 @@ export function ChatInterface() {
 
   return (
     <div className="h-full flex flex-col">
+      {/* Header with New Conversation button */}
+      {messages.length > 0 && (
+        <div className="border-b p-3 flex justify-end">
+          <Button
+            onClick={handleNewConversation}
+            variant="outline"
+            size="sm"
+            disabled={isLoading}
+            className="gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            New Conversation
+          </Button>
+        </div>
+      )}
+
       {/* Messages */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         <div className="space-y-4 max-w-3xl mx-auto">
