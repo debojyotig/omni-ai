@@ -102,7 +102,16 @@ export async function POST(req: NextRequest) {
         systemPrompt: agentConfig.systemPrompt,
         agents: agentConfig.agents,
         mcpServers,
-        maxTurns: 10
+        maxTurns: 10,
+        // Grant permission to all MCP tools (omni-api)
+        canUseTool: async (toolName: string, input: any) => {
+          // Allow all omni-api-mcp tools automatically
+          if (toolName.startsWith('mcp__omni-api__')) {
+            return { behavior: 'allow' as const, updatedInput: input };
+          }
+          // Deny other tools (shouldn't happen, but safety first)
+          return { behavior: 'deny' as const };
+        }
       }
     });
 
