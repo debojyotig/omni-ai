@@ -1,91 +1,163 @@
 /**
- * Activity Panel
+ * Activity Panel - ChatGPT Style
  *
- * Right sidebar showing active tool calls and agent activity.
- * Closable, shows real-time updates during investigations.
+ * Right sidebar showing vertical timeline of agent activity
+ * Matches ChatGPT's activity tracking UI
  */
 
 'use client'
 
-import { useState } from 'react'
-import { X, Activity, Loader2 } from 'lucide-react'
+import { useActivityStore } from '@/lib/stores/activity-store'
+import { X, ChevronRight, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { ToolCallCard, type ToolCall } from '@/components/tool-call-card'
-import { Separator } from '@/components/ui/separator'
+import { useState } from 'react'
 
-interface ActivityPanelProps {
-  toolCalls: ToolCall[]
-  isRunning: boolean
-  hint: string | null
-}
+export function ActivityPanel() {
+  const { isOpen, setOpen, steps } = useActivityStore()
+  const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set())
 
-export function ActivityPanel({ toolCalls, isRunning, hint }: ActivityPanelProps) {
-  const [isOpen, setIsOpen] = useState(true)
+  if (!isOpen) return null
 
-  if (!isOpen) {
-    return (
-      <div className="w-12 bg-background border-l flex flex-col items-center py-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsOpen(true)}
-          title="Show activity"
-        >
-          <Activity className="h-4 w-4" />
-        </Button>
-      </div>
-    )
+  const toggleStep = (id: string) => {
+    const newExpanded = new Set(expandedSteps)
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id)
+    } else {
+      newExpanded.add(id)
+    }
+    setExpandedSteps(newExpanded)
   }
 
+  const formatDuration = (ms?: number) => {
+    if (!ms) return ''
+    if (ms < 1000) return `${ms}ms`
+    return `${(ms / 1000).toFixed(1)}s`
+  }
+
+  const getRunningDuration = () => {
+    const runningStep = steps.find(s => s.status === 'running')
+    if (!runningStep) return null
+    return Date.now() - runningStep.timestamp
+  }
+
+  const runningDuration = getRunningDuration()
+
   return (
-    <div className="w-80 bg-background border-l flex flex-col">
+    <div className="w-80 border-l bg-background flex flex-col h-full">
       {/* Header */}
-      <div className="p-3 border-b flex items-center justify-between">
+      <div className="flex items-center justify-between px-4 py-3 border-b">
         <div className="flex items-center gap-2">
-          <Activity className="h-4 w-4" />
-          <h2 className="font-semibold text-sm">Activity</h2>
-          {isRunning && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
+          <h3 className="font-semibold text-sm">Activity</h3>
+          {runningDuration !== null && (
+            <span className="text-xs text-muted-foreground">
+              · {formatDuration(runningDuration)}
+            </span>
+          )}
         </div>
         <Button
           variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => setIsOpen(false)}
+          size="sm"
+          className="h-6 w-6 p-0 hover:bg-muted"
+          onClick={() => setOpen(false)}
         >
           <X className="h-4 w-4" />
         </Button>
       </div>
 
-      {/* Current Status */}
-      {hint && (
-        <>
-          <div className="p-3 bg-muted/50">
-            <p className="text-xs text-muted-foreground">Current Status</p>
-            <p className="text-sm mt-1">{hint}</p>
-          </div>
-          <Separator />
-        </>
-      )}
-
-      {/* Tool Calls */}
+      {/* Timeline */}
       <ScrollArea className="flex-1">
-        <div className="p-3 space-y-2">
-          {toolCalls.length === 0 ? (
-            <div className="text-center text-muted-foreground text-sm py-8">
-              <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No active tool calls</p>
-              <p className="text-xs mt-1">Tool calls will appear here</p>
+        <div className="p-4">
+          {steps.length === 0 ? (
+            <div className="text-center text-sm text-muted-foreground py-8">
+              No activity yet
             </div>
           ) : (
-            <>
-              <p className="text-xs text-muted-foreground mb-3">
-                {toolCalls.length} tool call{toolCalls.length !== 1 ? 's' : ''}
-              </p>
-              {toolCalls.map((toolCall) => (
-                <ToolCallCard key={toolCall.id} toolCall={toolCall} />
-              ))}
-            </>
+            <div className="space-y-4">
+              {steps.map((step, index) => {
+                const isExpanded = expandedSteps.has(step.id)
+                const hasDetails = step.description || (step.sources && step.sources.length > 0)
+
+                return (
+                  <div key={step.id} className="space-y-2">
+                    {/* Step title */}
+                    <div className="flex items-start gap-2.5">
+                      {/* Status indicator */}
+                      {step.status === 'running' ? (
+                        <Loader2 className="h-4 w-4 mt-0.5 animate-spin text-foreground flex-shrink-0" />
+                      ) : (
+                        <div className="h-2 w-2 mt-1.5 rounded-full bg-foreground flex-shrink-0" />
+                      )}
+
+                      <div className="flex-1 min-w-0">
+                        {hasDetails ? (
+                          <button
+                            onClick={() => toggleStep(step.id)}
+                            className="flex items-start gap-1.5 text-left w-full group"
+                          >
+                            <ChevronRight
+                              className={`h-4 w-4 mt-0.5 transition-transform flex-shrink-0 ${
+                                isExpanded ? 'rotate-90' : ''
+                              }`}
+                            />
+                            <span className="text-sm font-normal leading-relaxed">
+                              {step.title}
+                            </span>
+                          </button>
+                        ) : (
+                          <span className="text-sm font-normal leading-relaxed block">
+                            {step.title}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Expanded details */}
+                    {isExpanded && hasDetails && (
+                      <div className="ml-[22px] pl-4 border-l border-border space-y-3">
+                        {step.description && (
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {step.description}
+                          </p>
+                        )}
+
+                        {step.sources && step.sources.length > 0 && (
+                          <div className="space-y-1.5">
+                            {step.sources.map((source, idx) => (
+                              <a
+                                key={idx}
+                                href={source.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-xs hover:underline group"
+                              >
+                                <div className="h-1 w-1 rounded-full bg-current opacity-50 flex-shrink-0" />
+                                <span className="text-foreground/60 group-hover:text-foreground truncate">
+                                  {source.name}
+                                </span>
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Status footer */}
+                    {step.status === 'done' && (
+                      <div className="ml-[22px] flex items-center gap-2 text-xs text-muted-foreground">
+                        {step.duration && (
+                          <>
+                            <span>Thought for {formatDuration(step.duration)}</span>
+                            <span>·</span>
+                          </>
+                        )}
+                        <span>Done</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           )}
         </div>
       </ScrollArea>
