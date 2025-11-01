@@ -95,16 +95,24 @@ export function ConversationSidebar() {
             </div>
           ) : (
             conversations.map((conversation) => (
-              <button
+              <div
                 key={conversation.id}
-                onClick={() => setActiveConversation(conversation.id)}
                 className={cn(
-                  'w-full text-left p-2.5 rounded-lg transition-colors group',
+                  'w-full p-2.5 rounded-lg transition-colors group cursor-pointer',
                   'hover:bg-accent',
                   activeConversationId === conversation.id
                     ? 'bg-accent'
                     : 'bg-transparent'
                 )}
+                onClick={() => setActiveConversation(conversation.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setActiveConversation(conversation.id)
+                  }
+                }}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
@@ -124,7 +132,7 @@ export function ConversationSidebar() {
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
-              </button>
+              </div>
             ))
           )}
         </div>
