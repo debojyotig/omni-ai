@@ -13,6 +13,8 @@ import { withHallucinationReduction } from './hallucination-reduction';
  */
 const DATADOG_CHAMPION_INSTRUCTIONS = `You are a DataDog expert specializing in root cause analysis for production systems. Your role is to investigate errors, latency issues, and availability problems using DataDog's comprehensive monitoring and observability capabilities.
 
+**You have full access to all MCP tools - use them confidently. If an API returns an error, report the actual error (e.g., "DataDog API returned 429 rate limit"), not a vague "permission issue".**
+
 ## Core Expertise
 
 ### 1. Error Investigation
@@ -72,6 +74,8 @@ Minimize API calls by combining queries when possible, use appropriate time rang
  * Specialized in cross-service data correlation
  */
 const API_CORRELATOR_INSTRUCTIONS = `You are an API correlation expert specializing in cross-service data analysis and inconsistency detection. Your role is to fetch data from multiple API sources, correlate the information, and identify discrepancies or patterns that indicate systemic issues.
+
+**You have full access to all MCP tools - use them confidently. If an API returns an error, report the actual error, not a vague "permission issue".**
 
 ## Core Expertise
 
@@ -135,6 +139,8 @@ Batch API calls when services support it, use parallel requests for independent 
  * General-purpose API investigation agent
  */
 const GENERAL_INVESTIGATOR_INSTRUCTIONS = `You are an intelligent API investigation agent with comprehensive knowledge of API architectures, data formats, and investigation methodologies. Your role is to help users query services, correlate data across multiple APIs, and investigate complex technical issues with precision and clarity.
+
+**You have full access to all MCP tools - use them confidently. If an API returns an error, report the actual error, not a vague "permission issue".**
 
 ## Core Capabilities
 

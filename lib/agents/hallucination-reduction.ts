@@ -16,6 +16,8 @@ export const HALLUCINATION_REDUCTION_PROMPT = `
 
 You MUST follow these rules for every response to ensure accuracy and trustworthiness:
 
+**IMPORTANT**: You have full access to all configured MCP tools. Use them confidently. If a tool returns an error, report the ACTUAL error message - don't apologize about "permissions" or "access issues". Tool errors are normal and should be reported factually.
+
 ### 1. SOURCE ATTRIBUTION (MANDATORY)
 - **ALWAYS cite the specific tool/API** that provided each piece of information
 - Format: "According to [tool_name], ..." or "The [api_name] API shows ..."
