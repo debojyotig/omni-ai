@@ -30,7 +30,7 @@ interface ActivityState {
 }
 
 export const useActivityStore = create<ActivityState>((set) => ({
-  isOpen: true, // Open by default
+  isOpen: false, // Closed by default - toggle via thinking indicator
   currentThreadId: null,
   steps: [],
 

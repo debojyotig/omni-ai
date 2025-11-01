@@ -93,9 +93,11 @@ export function ChatInterface() {
     setActiveToolCalls([]); // Clear previous tool calls
     setError(null); // Clear previous errors
 
-    // Clear previous activity steps and set thread ID
+    // Clear previous activity steps, set thread ID, and open activity panel
     clearSteps();
     setThreadId(activeConversationId);
+    const { setOpen } = useActivityStore.getState();
+    setOpen(true); // Auto-open activity panel for new messages
 
     const controller = new AbortController();
     setAbortController(controller);
@@ -286,11 +288,28 @@ export function ChatInterface() {
 
           {/* Streaming message */}
           {isLoading && streamingContent && (
-            <ChatMessage
-              role="assistant"
-              content={streamingContent}
-              isStreaming={true}
-            />
+            <>
+              <ChatMessage
+                role="assistant"
+                content={streamingContent}
+                isStreaming={true}
+              />
+
+              {/* Thinking indicator - clickable to toggle activity panel */}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground ml-12 -mt-2">
+                <button
+                  onClick={() => {
+                    const { isOpen, setOpen } = useActivityStore.getState()
+                    setOpen(!isOpen)
+                  }}
+                  className="flex items-center gap-2 hover:text-foreground transition-colors cursor-pointer py-1 px-2 rounded hover:bg-muted"
+                  title="Toggle activity panel"
+                >
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span className="text-xs">Thinking...</span>
+                </button>
+              </div>
+            </>
           )}
 
           {/* Loading skeleton */}
