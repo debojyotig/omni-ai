@@ -1,8 +1,8 @@
-# Current Checkpoint: omni-ai WS7 Complete ✅ → Research Phase
+# Current Checkpoint: omni-ai WS8 Complete ✅ → Ready for WS9
 
 **Last Updated**: 2025-10-31
-**Current Phase**: Research & Planning (Claude Agent SDK Migration)
-**Active Workstream**: Research (Comprehensive Analysis for WS8-WS13)
+**Current Phase**: Claude Agent SDK Migration (Implementation)
+**Active Workstream**: WS8 Complete ✅ → WS9 Next (Agent Migration with Sub-agents)
 
 ---
 
@@ -79,9 +79,9 @@ rm temp-test-wsX.js
 ## Current Status
 
 **Project**: omni-ai (Intelligent Investigation Agent Platform)
-**Framework**: Mastra.ai + Next.js 16
-**Architecture**: Next.js web app + Mastra agents (integrated) + omni-api-mcp (MCP protocol)
-**Status**: All 5 workstreams complete, full-featured chat interface with command palette, progress tracking, and transparency hints
+**Framework**: Claude Agent SDK + Next.js 16 (migrating from Mastra.ai)
+**Architecture**: Next.js web app + Claude SDK agents + omni-api-mcp (MCP protocol via stdio)
+**Status**: WS1-WS8 complete, Claude SDK foundation ready, migrating agents in WS9
 
 ### Completed (WS1: Mastra + Next.js Setup) ✅
 
@@ -305,13 +305,31 @@ All new workstreams focus on **using Mastra's built-in capabilities** instead of
   - Workaround in place until upstream fix
 - **Git Commit**: `78368b8` - feat(WS7): implement token optimization and agent configuration
 
-### ⏳ WS8: Real Streaming & Investigation UI (PENDING)
-- Use Mastra agent streaming API
-- Server-Sent Events (SSE) to client
-- Connect UI to real events
-- **Status**: ⏳ Pending (blocked by WS6+WS7)
-- **Dependencies**: WS4 ✅, WS5 ✅
-- **Priority**: P1 (HIGH)
+### ✅ WS8: Claude Agent SDK Foundation & MCP Integration (COMPLETE)
+- Install Claude Agent SDK (v0.1.30)
+- Configure MCP server for omni-api-mcp
+- Create query wrapper for simplified API
+- Test end-to-end tool calling (discover_datasets)
+- Test multi-tool investigations (3-tool sequence)
+- Document MCP integration
+- **Status**: ✅ Complete (2025-10-31)
+- **Dependencies**: WS1-WS7 complete ✅
+- **Priority**: P0 (CRITICAL - Foundation for migration)
+- **Solution**:
+  - Claude SDK installed with --legacy-peer-deps (Zod 4 compatibility)
+  - MCP server configured with stdio transport and env passthrough
+  - Query wrapper created (lib/claude-sdk/)
+  - Prompt caching verified working (23,621+ tokens cached, 90% cost reduction)
+  - Multi-tool orchestration validated (3 tools in sequence)
+  - Complete documentation created (docs/CLAUDE_SDK_MCP_INTEGRATION.md)
+- **Validation**:
+  - ✅ MCP server connected: omni-api (connected)
+  - ✅ 14 omni-api-mcp tools loaded and accessible
+  - ✅ discover_datasets tool successfully called
+  - ✅ Multi-step workflows working
+  - ✅ Prompt caching active (90% cost reduction)
+  - ✅ Context maintained across turns
+- **Git Commit**: `53df30e` - feat(WS8): complete Claude Agent SDK foundation and MCP integration
 
 ---
 
@@ -555,9 +573,10 @@ All foundation work complete with working chat interface, 3 agents, MCP integrat
 
 ### Immediate Actions
 
-1. **Start WS8**: Begin Claude Agent SDK installation and MCP configuration
-2. **Read checkpoints**: Review detailed task lists in `.claude-code/checkpoints/checkpoint-ws8-*.md`
-3. **Reference docs**: Use parity analysis and migration guide during implementation
+1. **✅ WS8 Complete**: Claude Agent SDK installed, MCP configured, foundation validated
+2. **Start WS9**: Migrate 3 agents to Claude SDK with sub-agent architecture
+3. **Read checkpoint**: Review detailed task list in `.claude-code/checkpoints/checkpoint-ws9-agent-migration.md`
+4. **Reference docs**: Use [CLAUDE_SDK_MCP_INTEGRATION.md](../docs/CLAUDE_SDK_MCP_INTEGRATION.md) and migration guide
 
 ### Implementation Order
 
@@ -573,14 +592,15 @@ Must follow sequentially:
 
 ## Context for Next Session
 
-**Current Status**: Research complete ✅, ready to implement WS8
+**Current Status**: WS8 complete ✅, ready to implement WS9
 
-**When starting WS8**:
-1. Read [checkpoint-ws8-claude-sdk-foundation.md](./checkpoints/checkpoint-ws8-claude-sdk-foundation.md)
-2. Follow installation steps exactly
-3. Test MCP connection thoroughly
-4. Validate prompt caching is working
-5. Mark tasks complete in checkpoint file
+**When starting WS9**:
+1. Read [checkpoint-ws9-agent-migration.md](./checkpoints/checkpoint-ws9-agent-migration.md)
+2. Review Claude SDK integration docs: [CLAUDE_SDK_MCP_INTEGRATION.md](../docs/CLAUDE_SDK_MCP_INTEGRATION.md)
+3. Follow sub-agent configuration pattern (no wrapper class needed!)
+4. Test automatic agent delegation
+5. Integrate hallucination reduction techniques
+6. Mark tasks complete in checkpoint file
 
 **Supporting Documents**:
 - **Parity Analysis**: [docs/MASTRA_PARITY_ANALYSIS.md](../docs/MASTRA_PARITY_ANALYSIS.md)
@@ -600,6 +620,6 @@ Must follow sequentially:
 ---
 
 **Last Updated**: 2025-10-31
-**Current Checkpoint**: Research Complete ✅ → WS8 Ready
-**Next Phase**: Begin WS8 (Claude Agent SDK Foundation & MCP Integration)
-**Git Commit**: `78368b8` - feat(WS7): implement token optimization and agent configuration
+**Current Checkpoint**: WS8 Complete ✅ → WS9 Ready
+**Next Phase**: Begin WS9 (Agent Migration with Sub-agents)
+**Git Commit**: `53df30e` - feat(WS8): complete Claude Agent SDK foundation and MCP integration
