@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { ThemeSwitcher } from "@/components/theme-switcher"
+import { NavUser } from "@/components/nav-user"
 
 export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const {
@@ -119,20 +120,13 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
       </SidebarContent>
 
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Settings">
-              <Settings className="size-4" />
-              <span>Settings</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <div className="flex items-center justify-between px-2 py-1">
-              <span className="text-xs text-muted-foreground">Theme</span>
-              <ThemeSwitcher />
-            </div>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <NavUser
+          user={{
+            name: "User",
+            email: "user@example.com",
+            avatar: "/avatars/user.png"
+          }}
+        />
       </SidebarFooter>
 
       <SidebarRail />
