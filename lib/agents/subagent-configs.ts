@@ -5,6 +5,8 @@
  * Claude SDK automatically delegates to the appropriate agent based on descriptions.
  */
 
+import { withHallucinationReduction } from './hallucination-reduction';
+
 /**
  * DataDog Champion Agent Instructions
  * Specialized in DataDog-based root cause analysis
@@ -213,7 +215,7 @@ Capabilities:
 - Correlates timeline with deployments
 - Performs 8-step root cause analysis`,
 
-    prompt: DATADOG_CHAMPION_INSTRUCTIONS,
+    prompt: withHallucinationReduction(DATADOG_CHAMPION_INSTRUCTIONS),
 
     tools: [
       'mcp__omni-api__discover_datasets',
@@ -238,7 +240,7 @@ Capabilities:
 - Detects inconsistencies
 - Merges results intelligently`,
 
-    prompt: API_CORRELATOR_INSTRUCTIONS,
+    prompt: withHallucinationReduction(API_CORRELATOR_INSTRUCTIONS),
 
     tools: [
       'mcp__omni-api__call_rest_api',
@@ -262,7 +264,7 @@ Capabilities:
 - Simple queries
 - Documentation lookup`,
 
-    prompt: GENERAL_INVESTIGATOR_INSTRUCTIONS,
+    prompt: withHallucinationReduction(GENERAL_INVESTIGATOR_INSTRUCTIONS),
 
     tools: [
       'mcp__omni-api__discover_datasets',

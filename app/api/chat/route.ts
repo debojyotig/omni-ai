@@ -9,6 +9,7 @@ import { NextRequest } from 'next/server';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import { mcpServers } from '@/lib/mcp/claude-sdk-mcp-config';
 import { subAgentConfigs } from '@/lib/agents/subagent-configs';
+import { withHallucinationReduction } from '@/lib/agents/hallucination-reduction';
 import type { AgentType } from '@/lib/stores/agent-store';
 
 /**
@@ -16,7 +17,7 @@ import type { AgentType } from '@/lib/stores/agent-store';
  *
  * The orchestrator analyzes user intent and automatically delegates to specialized sub-agents.
  */
-const MASTER_ORCHESTRATOR_INSTRUCTIONS = `You are the Master Orchestrator for omni-ai, an intelligent investigation platform.
+const MASTER_ORCHESTRATOR_INSTRUCTIONS = withHallucinationReduction(`You are the Master Orchestrator for omni-ai, an intelligent investigation platform.
 
 Your role:
 1. Analyze user queries to understand intent
@@ -36,7 +37,7 @@ You: "I'll delegate this to the DataDog Champion agent, which specializes in err
 
 User: "Compare user data from GitHub and DataDog"
 You: "I'll use the API Correlator agent to fetch and correlate data from both services."
-[Delegates to api-correlator]`;
+[Delegates to api-correlator]`);
 
 /**
  * Map UI agent IDs to sub-agent configurations
@@ -45,14 +46,14 @@ function getAgentConfiguration(agentType: AgentType) {
   switch (agentType) {
     case 'datadog':
       return {
-        systemPrompt: `You are the DataDog Champion. ${subAgentConfigs['datadog-champion'].prompt}`,
+        systemPrompt: subAgentConfigs['datadog-champion'].prompt, // Already includes hallucination reduction
         agents: undefined, // No sub-delegation when specific agent selected
         description: 'DataDog Champion (Root Cause Analysis)'
       };
 
     case 'correlator':
       return {
-        systemPrompt: `You are the API Correlator. ${subAgentConfigs['api-correlator'].prompt}`,
+        systemPrompt: subAgentConfigs['api-correlator'].prompt, // Already includes hallucination reduction
         agents: undefined, // No sub-delegation
         description: 'API Correlator (Cross-Service Analysis)'
       };
@@ -60,8 +61,8 @@ function getAgentConfiguration(agentType: AgentType) {
     case 'smart':
     default:
       return {
-        systemPrompt: MASTER_ORCHESTRATOR_INSTRUCTIONS,
-        agents: subAgentConfigs, // Enable automatic delegation
+        systemPrompt: MASTER_ORCHESTRATOR_INSTRUCTIONS, // Already includes hallucination reduction
+        agents: subAgentConfigs, // Enable automatic delegation (sub-agents already have reduction)
         description: 'Smart Agent (Auto-routing with sub-agents)'
       };
   }
