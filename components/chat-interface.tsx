@@ -27,52 +27,57 @@ const STORAGE_KEY_THREAD = 'omni-ai-current-thread';
 const STORAGE_KEY_MESSAGES = 'omni-ai-current-messages';
 
 export function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>(() => {
-    // Load messages from localStorage
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(STORAGE_KEY_MESSAGES);
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch {
-          return [];
-        }
-      }
-    }
-    return [];
-  });
+  // Start with default values (same on server and client)
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const [abortController, setAbortController] = useState<AbortController | null>(null);
-  const [threadId, setThreadId] = useState<string>(() => {
-    // Load thread ID from localStorage or create new one
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(STORAGE_KEY_THREAD);
-      if (stored) {
-        return stored;
-      }
-    }
-    return `thread-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  });
+  const [threadId, setThreadId] = useState<string>('');
+  const [isHydrated, setIsHydrated] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { selectedAgent } = useAgentStore();
   const { setRunning, setHint, reset: resetProgress } = useProgressStore();
 
+  // Load from localStorage after mount (client-only)
+  useEffect(() => {
+    // Load or create thread ID
+    const storedThread = localStorage.getItem(STORAGE_KEY_THREAD);
+    if (storedThread) {
+      setThreadId(storedThread);
+    } else {
+      const newThreadId = `thread-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      setThreadId(newThreadId);
+      localStorage.setItem(STORAGE_KEY_THREAD, newThreadId);
+    }
+
+    // Load messages
+    const storedMessages = localStorage.getItem(STORAGE_KEY_MESSAGES);
+    if (storedMessages) {
+      try {
+        setMessages(JSON.parse(storedMessages));
+      } catch {
+        // Invalid JSON, ignore
+      }
+    }
+
+    setIsHydrated(true);
+  }, []);
+
   // Persist threadId to localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isHydrated && threadId) {
       localStorage.setItem(STORAGE_KEY_THREAD, threadId);
     }
-  }, [threadId]);
+  }, [threadId, isHydrated]);
 
   // Persist messages to localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isHydrated) {
       localStorage.setItem(STORAGE_KEY_MESSAGES, JSON.stringify(messages));
     }
-  }, [messages]);
+  }, [messages, isHydrated]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -108,7 +113,7 @@ export function ChatInterface() {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !threadId) return;
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -247,7 +252,7 @@ export function ChatInterface() {
   return (
     <div className="h-full flex flex-col">
       {/* Header with New Conversation button */}
-      {messages.length > 0 && (
+      {isHydrated && messages.length > 0 && (
         <div className="border-b p-3 flex justify-end">
           <Button
             onClick={handleNewConversation}
