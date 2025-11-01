@@ -19,13 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Settings, Sparkles, Bot } from 'lucide-react'
-import { useViewStore } from '@/lib/stores/view-store'
+import { Sparkles, Bot } from 'lucide-react'
+import { ThemeSwitcher } from '@/components/theme-switcher'
 
 export function ChatHeader() {
   const { selectedProviderId, selectedModelId, setModel, getAllModels } = useProviderStore()
   const { selectedAgent, setAgent } = useAgentStore()
-  const { setActiveView } = useViewStore()
 
   const allModels = getAllModels()
 
@@ -78,7 +77,7 @@ export function ChatHeader() {
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-muted-foreground" />
           <Select
-            value={selectedModelId || undefined}
+            value={selectedModelId || ''}
             onValueChange={setModel}
             disabled={allModels.length === 0}
           >
@@ -117,14 +116,8 @@ export function ChatHeader() {
         </div>
       </div>
 
-      {/* Right: Settings button */}
-      <button
-        onClick={() => setActiveView('settings')}
-        className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-        title="Open settings"
-      >
-        <Settings className="w-5 h-5" />
-      </button>
+      {/* Right: Theme switcher */}
+      <ThemeSwitcher />
     </div>
   )
 }

@@ -2,7 +2,6 @@
 
 import { MessageSquare, Settings } from 'lucide-react'
 import { useViewStore, type View } from '@/lib/stores/view-store'
-import { ThemeSwitcher } from '@/components/theme-switcher'
 
 export function ActivityBar() {
   const { activeView, setActiveView } = useViewStore()
@@ -13,7 +12,11 @@ export function ActivityBar() {
   ]
 
   return (
-    <div className="w-[72px] bg-background border-r flex flex-col items-center pt-4 pb-4 gap-2">
+    <div
+      className="w-[72px] min-w-[72px] bg-muted/50 border-r border-border flex flex-col items-center pt-4 pb-4 gap-2"
+      style={{ position: 'relative', zIndex: 9999 }}
+    >
+
       {items.map((item) => {
         const Icon = item.icon
         return (
@@ -37,11 +40,6 @@ export function ActivityBar() {
           </button>
         )
       })}
-
-      {/* Theme switcher at bottom */}
-      <div className="mt-auto pt-2">
-        <ThemeSwitcher />
-      </div>
     </div>
   )
 }
