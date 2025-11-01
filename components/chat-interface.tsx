@@ -21,6 +21,7 @@ import { StreamParser, getHintFromChunk } from '@/lib/claude-sdk/stream-parser';
 import { type ToolCall } from '@/components/tool-call-card';
 import { MessageSkeleton } from '@/components/message-skeleton';
 import { ActivityPanel } from '@/components/activity-panel';
+import { ErrorMessage } from '@/components/error-message';
 
 export function ChatInterface() {
   const [input, setInput] = useState('');
@@ -29,6 +30,7 @@ export function ChatInterface() {
   const [activeToolCalls, setActiveToolCalls] = useState<ToolCall[]>([]);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { selectedAgent } = useAgentStore();
@@ -88,6 +90,7 @@ export function ChatInterface() {
     setRunning(true);
     setStreamingContent('');
     setActiveToolCalls([]); // Clear previous tool calls
+    setError(null); // Clear previous errors
 
     const controller = new AbortController();
     setAbortController(controller);
@@ -215,15 +218,8 @@ export function ChatInterface() {
         console.log('Request aborted by user');
       } else {
         console.error('Chat error:', error);
-        if (activeConversationId) {
-          const errorMessage = {
-            id: crypto.randomUUID(),
-            role: 'assistant' as const,
-            content: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
-            timestamp: Date.now(),
-          };
-          addMessage(activeConversationId, errorMessage);
-        }
+        // Set error state to display ErrorMessage component
+        setError(error instanceof Error ? error : new Error(String(error)));
       }
     } finally {
       setIsLoading(false);
@@ -276,6 +272,14 @@ export function ChatInterface() {
           {/* Loading skeleton */}
           {isLoading && !streamingContent && activeToolCalls.length === 0 && (
             <MessageSkeleton />
+          )}
+
+          {/* Error display */}
+          {error && (
+            <ErrorMessage
+              error={error}
+              title="Failed to get response"
+            />
           )}
         </div>
       </ScrollArea>
