@@ -13,3 +13,4 @@ dist
 # Database files
 *.db
 *.db-*
+tsconfig.tsbuildinfo
