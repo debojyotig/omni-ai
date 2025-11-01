@@ -18,6 +18,7 @@ import { TransparencyHint } from '@/components/transparency-hint';
 import { ChatMessage } from '@/components/chat-message';
 import { StreamParser, getHintFromChunk } from '@/lib/claude-sdk/stream-parser';
 import { ToolCallCard, type ToolCall } from '@/components/tool-call-card';
+import { MessageSkeleton } from '@/components/message-skeleton';
 
 interface Message {
   id: string;
@@ -338,14 +339,9 @@ export function ChatInterface() {
             />
           )}
 
-          {/* Loading indicator */}
-          {isLoading && !streamingContent && (
-            <div className="flex justify-start">
-              <div className="bg-muted rounded-lg px-4 py-2 flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm">Thinking...</span>
-              </div>
-            </div>
+          {/* Loading skeleton */}
+          {isLoading && !streamingContent && activeToolCalls.length === 0 && (
+            <MessageSkeleton />
           )}
         </div>
       </ScrollArea>

@@ -278,9 +278,24 @@ export function MessageSkeleton() {
 ```
 
 **Validation**:
-- [ ] Skeletons show while streaming
-- [ ] Smooth transition to content
-- [ ] Matches overall design
+- [x] Skeletons show while streaming
+- [x] Smooth transition to content
+- [x] Matches overall design
+
+**Status**: ✅ Complete (2025-11-01)
+**Implementation**:
+- Created MessageSkeleton component (components/message-skeleton.tsx):
+  - Bot avatar with Avatar component
+  - Three animated Skeleton lines (different widths)
+  - Matches ChatMessage layout for smooth transition
+  - Uses bg-muted background for consistency
+- Updated ChatInterface to use MessageSkeleton:
+  - Replaced simple "Thinking..." indicator
+  - Shows skeleton when loading and no streaming content
+  - Only shows when activeToolCalls is empty (avoids duplication)
+  - Provides better visual feedback during initial load
+- Smooth transition from skeleton to actual content
+- Dev server running successfully
 
 ---
 
