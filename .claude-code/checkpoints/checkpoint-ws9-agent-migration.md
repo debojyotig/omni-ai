@@ -1,9 +1,11 @@
 # WS9: Agent Migration with Sub-agents
 
-**Status**: Not Started
+**Status**: ⏳ In Progress (60% complete - Tasks 1-3 done)
 **Duration**: 1-2 days (SIMPLIFIED - no wrapper needed!)
-**Dependencies**: WS8 complete
+**Dependencies**: WS8 complete ✅
 **Priority**: P0 (CRITICAL)
+**Completed**: 2025-10-31 (Tasks 1-3)
+**Remaining**: Tasks 4-5 (4-6 hours estimated)
 
 ---
 
@@ -442,3 +444,207 @@ export const enhancedSubAgentConfigs = Object.entries(subAgentConfigs).reduce(
 - **Hallucination Reduction**: https://docs.claude.com/en/docs/test-and-evaluate/strengthen-guardrails/reduce-hallucinations
 - **Parity Analysis**: [docs/MASTRA_PARITY_ANALYSIS.md](../../docs/MASTRA_PARITY_ANALYSIS.md)
 - **WS8 Foundation**: [checkpoint-ws8-claude-sdk-foundation.md](./checkpoint-ws8-claude-sdk-foundation.md)
+
+---
+
+## ⏳ Progress Summary (2025-10-31)
+
+**Completed Tasks (3/5 - 60%)**:
+
+### ✅ Task 1: Sub-agent Configurations (Complete)
+- Created `lib/agents/subagent-configs.ts`
+- Extracted 1,800+ token instructions from Mastra agents
+- Configured 3 sub-agents:
+  - `datadog-champion`: Error analysis and root cause investigation
+  - `api-correlator`: Cross-service data correlation
+  - `general-investigator`: API exploration and general queries
+- Added clear descriptions for automatic delegation
+- Defined tool restrictions for each agent
+
+**Files Created**:
+- `lib/agents/subagent-configs.ts` (500+ lines)
+
+### ✅ Task 2: Main Orchestrator (Complete)
+- Replaced Mastra `generate()` with Claude SDK `query()`
+- Implemented Master Orchestrator with automatic delegation logic
+- Added Server-Sent Events (SSE) streaming
+- Implemented session continuity via `resume: threadId`
+- Created agent selection logic (smart vs. specific agents)
+
+**Key Code**:
+```typescript
+const result = query({
+  prompt: message,
+  options: {
+    resume: threadId,
+    systemPrompt: agentConfig.systemPrompt,
+    agents: agentConfig.agents, // Sub-agents for automatic delegation
+    mcpServers,
+    maxTurns: 10
+  }
+});
+```
+
+**Files Modified**:
+- `app/api/chat/route.ts` (150 lines, complete rewrite)
+
+### ✅ Task 3: Cleanup & Frontend (Complete)
+- Updated ChatInterface for SSE streaming
+- Implemented real-time chunk parsing
+- Added streaming text display with cursor animation
+- Integrated tool call display as transparency hints
+- Removed old Mastra files:
+  - `src/mastra/agents/*` (3 files)
+  - `src/mastra/workflows/*` (2 files)
+  - `app/api/test-mcp/` (1 directory)
+  - `lib/mastra/test-agent.ts`
+- Fixed Tailwind config TypeScript error
+
+**Files Modified**:
+- `components/chat-interface.tsx` (290 lines, complete rewrite)
+- `tailwind.config.ts` (fixed darkMode type)
+
+**Files Deleted**:
+- 7 old Mastra files (1,350+ lines removed)
+
+---
+
+## 🚧 Remaining Tasks (2/5 - 40%)
+
+### ⏳ Task 4: Update UI Agent Selector (Pending)
+**Estimated**: 1-2 hours
+
+The current agent store and selector work but need minor updates:
+- Agent IDs already match: `datadog`, `correlator`, `smart`
+- UI selector already exists and functional
+- **Likely already working** - just needs verification
+
+**Action Needed**:
+1. Test agent selector in UI
+2. Verify each agent works when selected
+3. Update descriptions if needed
+
+### ⏳ Task 5: Hallucination Reduction (Pending)
+**Estimated**: 2-4 hours
+
+Add hallucination reduction prompts to all sub-agents:
+
+```typescript
+// lib/agents/hallucination-reduction.ts
+const HALLUCINATION_REDUCTION_PROMPT = `
+IMPORTANT: Follow these rules to ensure accuracy:
+
+1. **Cite Sources**: Always reference which API/tool provided information
+2. **Express Uncertainty**: Use "likely", "appears to be", "based on..." when uncertain
+3. **Verify Before Claiming**: Don't make statements without checking tool results
+4. **Cross-Reference**: Verify information across multiple sources when possible
+5. **Acknowledge Limitations**: If data is incomplete, say so explicitly
+6. **Separate Facts from Inference**: Distinguish observations from analysis
+
+Example:
+✅ GOOD: "Based on the DataDog API response, there were 1,247 errors at 2:45 PM."
+❌ BAD: "The deployment caused the errors." (unverified causation)
+`;
+```
+
+**Action Needed**:
+1. Create hallucination-reduction.ts
+2. Append to all sub-agent prompts
+3. Test that agents cite sources
+4. Verify no unsupported claims
+
+---
+
+## Validation Status
+
+### ✅ Completed Validations
+- TypeScript compilation: ✅ (after cleanup)
+- Sub-agent configs created: ✅
+- Chat API route updated: ✅
+- Frontend SSE streaming: ✅
+- Old Mastra files removed: ✅
+- Dev server starts: ✅ (localhost:3000)
+
+### ⏳ Pending Validations
+- [ ] Manual testing with real queries
+- [ ] DataDog query delegation
+- [ ] API Correlator delegation
+- [ ] General Investigator delegation
+- [ ] Multi-agent coordination
+- [ ] Session resumption across page refresh
+- [ ] Tool calls display correctly
+- [ ] Streaming text renders smoothly
+
+---
+
+## Known Issues
+
+### Issue 1: Build SSR Error
+**Symptom**: `TypeError: Cannot read properties of null (reading 'useContext')`
+
+**Impact**: Build fails, but dev mode works fine
+
+**Cause**: Zustand store server-side rendering issue
+
+**Status**: **Not blocking** - dev mode functional
+
+**Fix Needed**: Add 'use client' directives or refactor stores for SSR
+
+### Issue 2: Manual Testing Required
+**Symptom**: No automated tests for sub-agent delegation
+
+**Impact**: Cannot verify automatic delegation works correctly
+
+**Status**: **Blocking for Task 4**
+
+**Fix Needed**: 
+1. Test in browser at localhost:3000
+2. Send queries that trigger each agent
+3. Verify delegation logic works
+
+---
+
+## Next Steps
+
+**For Task 4-5 Completion** (4-6 hours):
+
+1. **Manual Testing** (1-2 hours):
+   ```bash
+   # Dev server running at localhost:3000
+   # Test queries:
+   - "What APIs are available?" → general-investigator
+   - "Why are we seeing 500 errors?" → datadog-champion
+   - "Compare data from GitHub and DataDog" → api-correlator
+   ```
+
+2. **Verify UI Selector** (30 min):
+   - Select different agents
+   - Confirm they constrain behavior
+   - Test smart-agent delegation
+
+3. **Add Hallucination Reduction** (2-3 hours):
+   - Create prompts
+   - Integrate into sub-agents
+   - Test source citation
+
+4. **Final Validation** (1 hour):
+   - All 3 agents work
+   - Delegation automatic
+   - Streaming smooth
+   - Tool calls visible
+
+---
+
+## Git History
+
+**Current Commit**: `68edf0d` - feat(WS9): migrate to Claude SDK sub-agents with SSE streaming (Tasks 1-3)
+
+**Previous**:
+- `1cf98ba` - feat(WS8): complete Claude Agent SDK foundation and MCP integration
+- `53df30e` (earlier WS8)
+
+---
+
+**Last Updated**: 2025-10-31
+**Status**: ⏳ In Progress (60% complete)
+**Next Session**: Complete Tasks 4-5, manual testing, hallucination reduction
