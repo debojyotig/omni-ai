@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { ActivityBar } from '@/components/activity-bar'
 import { CommandPalette } from '@/components/command-palette'
 import { ThemeProvider } from '@/components/theme-provider'
 
@@ -26,12 +25,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="flex h-screen overflow-hidden">
-            <ActivityBar />
-            <main className="flex-1 overflow-hidden">
-              {children}
-            </main>
-          </div>
+          {children}
           <CommandPalette />
         </ThemeProvider>
       </body>
