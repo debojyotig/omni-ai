@@ -1,7 +1,7 @@
-# WS12: UI Polish & Smart Message Display
+# WS12: UI Polish & Smart Message Display + 3-Column Layout Refactor
 
-**Status**: Not Started
-**Duration**: 5-7 days
+**Status**: ✅ Complete (2025-11-01)
+**Duration**: Completed in 1 day
 **Dependencies**: WS9, WS11 complete
 **Priority**: P1 (HIGH)
 
@@ -356,5 +356,75 @@ export function ErrorMessage({ error }: { error: Error }) {
 ## References
 
 - shadcn/ui Components: https://ui.shadcn.com/
+- shadcn/ui Sidebar Blocks: https://ui.shadcn.com/blocks/sidebar
 - react-markdown: https://github.com/remarkjs/react-markdown
 - react-syntax-highlighter: https://github.com/react-syntax-highlighter/react-syntax-highlighter
+- next-themes: https://github.com/pacocoursey/next-themes
+
+---
+
+## Additional Work: 3-Column Layout & Conversation Persistence
+
+**Beyond Original Scope** - Implemented ChatGPT-style UI refactor:
+
+### Task 6: Theme Switching (BONUS)
+**Status**: ✅ Complete (2025-11-01)
+- Installed next-themes package
+- Created ThemeProvider component
+- Created ThemeSwitcher with light/dark/system modes
+- Updated globals.css with light mode color scheme
+- Added theme switcher to activity bar
+- Proper SSR handling with suppressHydrationWarning
+
+### Task 7: Conversation Persistence (BONUS)
+**Status**: ✅ Complete (2025-11-01)
+- Created conversation-store.ts with Zustand persist middleware
+- Support for multiple conversations with localStorage
+- Auto-generate conversation titles from first user message
+- Create, delete, and switch between conversations
+- Conversation list with timestamps (Today, Yesterday, X days ago)
+- Refactored ChatInterface to use conversation store
+
+### Task 8: Left Sidebar - Conversation List (BONUS)
+**Status**: ✅ Complete (2025-11-01)
+- Created ConversationSidebar component
+- Collapsible sidebar (collapse to icon bar)
+- Conversation list with hover effects
+- Delete conversation button (with confirmation)
+- New conversation button
+- Empty state with helpful message
+
+### Task 9: Right Sidebar - Activity Panel (BONUS)
+**Status**: ✅ Complete (2025-11-01)
+- Created ActivityPanel component
+- Closable panel (collapse to icon button)
+- Shows active tool calls in real-time
+- Displays current status/hint
+- Tool call count indicator
+- Empty state when no activity
+
+### Task 10: 3-Column Layout Integration (BONUS)
+**Status**: ✅ Complete (2025-11-01)
+- Updated page.tsx with ConversationSidebar
+- Refactored ChatInterface to include ActivityPanel
+- Layout: ActivityBar (72px) + Sidebar (256px) + Chat (flex) + Activity Panel (320px)
+- Removed old "New Conversation" button from header
+- All tool calls moved to activity panel (cleaner chat view)
+
+**Git Commit**: 8fa23b0 - "feat: implement 3-column layout with conversation persistence and theme switching"
+
+**Files Created**:
+- components/conversation-sidebar.tsx
+- components/activity-panel.tsx
+- components/theme-provider.tsx
+- components/theme-switcher.tsx
+- lib/stores/conversation-store.ts
+
+**Files Modified**:
+- app/layout.tsx (added ThemeProvider)
+- app/page.tsx (added ConversationSidebar)
+- components/chat-interface.tsx (major refactor to use conversation store)
+- components/activity-bar.tsx (added theme switcher)
+- app/globals.css (added light mode colors)
+
+**Result**: Production-ready 3-column ChatGPT-style interface with full conversation management and theme switching! 🎉
