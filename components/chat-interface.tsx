@@ -16,6 +16,8 @@ import { useAgentStore } from '@/lib/stores/agent-store';
 import { useProgressStore } from '@/lib/stores/progress-store';
 import { TransparencyHint } from '@/components/transparency-hint';
 import { ChatMessage } from '@/components/chat-message';
+import { StreamParser, getHintFromChunk } from '@/lib/claude-sdk/stream-parser';
+import { ToolCallCard, type ToolCall } from '@/components/tool-call-card';
 
 interface Message {
   id: string;
@@ -33,6 +35,7 @@ export function ChatInterface() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
+  const [activeToolCalls, setActiveToolCalls] = useState<ToolCall[]>([]);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [threadId, setThreadId] = useState<string>('');
   const [isHydrated, setIsHydrated] = useState(false);
@@ -129,6 +132,7 @@ export function ChatInterface() {
     setIsLoading(true);
     setRunning(true);
     setStreamingContent('');
+    setActiveToolCalls([]); // Clear previous tool calls
 
     const controller = new AbortController();
     setAbortController(controller);
@@ -154,11 +158,11 @@ export function ChatInterface() {
         throw new Error(errorData.error || 'Failed to get response');
       }
 
-      // Handle SSE stream
+      // Handle SSE stream with StreamParser
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
+      const parser = new StreamParser();
       let buffer = '';
-      let accumulatedText = '';
 
       if (!reader) {
         throw new Error('Response body is not readable');
@@ -183,33 +187,56 @@ export function ChatInterface() {
 
           try {
             const jsonStr = line.slice(6); // Remove 'data: ' prefix
-            const chunk = JSON.parse(jsonStr);
+            const rawChunk = JSON.parse(jsonStr);
 
-            // Handle different chunk types
-            if (chunk.type === 'system' && chunk.subtype === 'init') {
-              // Session initialized (backend handles session mapping automatically)
-              setHint('Agent initialized, processing query...');
-            } else if (chunk.type === 'assistant' && chunk.message?.content) {
-              // Extract text and tool calls from assistant message
-              const content = chunk.message.content;
+            // Parse chunk with StreamParser
+            const parsedChunk = parser.parseChunk(rawChunk);
 
-              // Look for text content
-              const textParts = content.filter((c: any) => c.type === 'text');
-              if (textParts.length > 0) {
-                const newText = textParts.map((t: any) => t.text).join('');
-                accumulatedText = newText;
-                setStreamingContent(newText);
-              }
+            if (!parsedChunk) continue;
 
-              // Look for tool uses
-              const toolUses = content.filter((c: any) => c.type === 'tool_use');
-              if (toolUses.length > 0) {
-                const toolNames = toolUses.map((t: any) => t.name.replace('mcp__omni-api__', '')).join(', ');
-                setHint(`Calling tools: ${toolNames}`);
-              }
-            } else if (chunk.type === 'result') {
-              // Final result received
-              setHint(null);
+            // Update hint based on parsed chunk
+            const hint = getHintFromChunk(parsedChunk);
+            if (hint !== null) {
+              setHint(hint);
+            }
+
+            // Handle different parsed chunk types
+            switch (parsedChunk.type) {
+              case 'text':
+                // Update streaming content with accumulated text
+                setStreamingContent(parsedChunk.accumulatedText);
+                break;
+
+              case 'tool_use':
+                // Tool call detected - add to active tool calls
+                console.log(`[STREAM] Tool called: ${parsedChunk.displayName}`);
+                const newToolCall: ToolCall = {
+                  id: parsedChunk.id,
+                  name: parsedChunk.displayName,
+                  arguments: parsedChunk.input,
+                  status: 'running',
+                  startTime: Date.now(),
+                };
+                setActiveToolCalls((prev) => [...prev, newToolCall]);
+                break;
+
+              case 'thinking':
+                // Extended thinking mode
+                console.log('[STREAM] Agent thinking...');
+                break;
+
+              case 'error':
+                // Error occurred
+                console.error('[STREAM] Error:', parsedChunk.message);
+                setHint(`Error: ${parsedChunk.message}`);
+                break;
+
+              case 'system':
+                if (parsedChunk.subtype === 'complete') {
+                  // Clear hint on completion
+                  setHint(null);
+                }
+                break;
             }
           } catch (parseError) {
             console.error('Failed to parse SSE chunk:', parseError);
@@ -217,12 +244,13 @@ export function ChatInterface() {
         }
       }
 
-      // Add final assistant message
-      if (accumulatedText) {
+      // Add final assistant message with accumulated text
+      const finalText = parser.getAccumulatedText();
+      if (finalText) {
         const assistantMessage: Message = {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: accumulatedText,
+          content: finalText,
           timestamp: Date.now(),
         };
         setMessages((prev) => [...prev, assistantMessage]);
@@ -291,6 +319,15 @@ export function ChatInterface() {
               content={message.content}
             />
           ))}
+
+          {/* Active tool calls */}
+          {activeToolCalls.length > 0 && (
+            <div className="space-y-2">
+              {activeToolCalls.map((toolCall) => (
+                <ToolCallCard key={toolCall.id} toolCall={toolCall} />
+              ))}
+            </div>
+          )}
 
           {/* Streaming message */}
           {isLoading && streamingContent && (
