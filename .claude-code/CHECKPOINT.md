@@ -454,7 +454,7 @@ All new workstreams focus on **using Mastra's built-in capabilities** instead of
   SimpleSessionStore.saveSessionId()
   ```
 - **Time Savings**: 3-5 days (completed in 1 day vs 5-7 day estimate) ✨
-- **Git Commit**: (to be created)
+- **Git Commit**: `62f1e7b` - feat(WS11): implement simple session persistence with LibSQL
 
 ---
 
