@@ -8,81 +8,48 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Send, Loader2, StopCircle, Plus } from 'lucide-react';
+import { Send, Loader2, StopCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAgentStore } from '@/lib/stores/agent-store';
 import { useProgressStore } from '@/lib/stores/progress-store';
+import { useConversationStore } from '@/lib/stores/conversation-store';
 import { TransparencyHint } from '@/components/transparency-hint';
 import { ChatMessage } from '@/components/chat-message';
 import { StreamParser, getHintFromChunk } from '@/lib/claude-sdk/stream-parser';
-import { ToolCallCard, type ToolCall } from '@/components/tool-call-card';
+import { type ToolCall } from '@/components/tool-call-card';
 import { MessageSkeleton } from '@/components/message-skeleton';
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: number;
-}
-
-const STORAGE_KEY_THREAD = 'omni-ai-current-thread';
-const STORAGE_KEY_MESSAGES = 'omni-ai-current-messages';
+import { ActivityPanel } from '@/components/activity-panel';
 
 export function ChatInterface() {
-  // Start with default values (same on server and client)
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const [activeToolCalls, setActiveToolCalls] = useState<ToolCall[]>([]);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
-  const [threadId, setThreadId] = useState<string>('');
-  const [isHydrated, setIsHydrated] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { selectedAgent } = useAgentStore();
-  const { setRunning, setHint, reset: resetProgress } = useProgressStore();
+  const { setRunning, setHint, reset: resetProgress, hint } = useProgressStore();
+  const {
+    conversations,
+    activeConversationId,
+    createConversation,
+    addMessage,
+    getActiveConversation,
+  } = useConversationStore();
 
-  // Load from localStorage after mount (client-only)
+  // Get active conversation and its messages
+  const activeConversation = getActiveConversation();
+  const messages = activeConversation?.messages ?? [];
+
+  // Create initial conversation if none exists
   useEffect(() => {
-    // Load or create thread ID
-    const storedThread = localStorage.getItem(STORAGE_KEY_THREAD);
-    if (storedThread) {
-      setThreadId(storedThread);
-    } else {
-      const newThreadId = `thread-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-      setThreadId(newThreadId);
-      localStorage.setItem(STORAGE_KEY_THREAD, newThreadId);
+    if (conversations.length === 0) {
+      createConversation();
     }
-
-    // Load messages
-    const storedMessages = localStorage.getItem(STORAGE_KEY_MESSAGES);
-    if (storedMessages) {
-      try {
-        setMessages(JSON.parse(storedMessages));
-      } catch {
-        // Invalid JSON, ignore
-      }
-    }
-
-    setIsHydrated(true);
   }, []);
-
-  // Persist threadId to localStorage
-  useEffect(() => {
-    if (isHydrated && threadId) {
-      localStorage.setItem(STORAGE_KEY_THREAD, threadId);
-    }
-  }, [threadId, isHydrated]);
-
-  // Persist messages to localStorage
-  useEffect(() => {
-    if (isHydrated) {
-      localStorage.setItem(STORAGE_KEY_MESSAGES, JSON.stringify(messages));
-    }
-  }, [messages, isHydrated]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -90,21 +57,6 @@ export function ChatInterface() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, streamingContent]);
-
-  const handleNewConversation = () => {
-    if (isLoading) return; // Don't allow starting new conversation while loading
-
-    // Generate new thread ID
-    const newThreadId = `thread-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    setThreadId(newThreadId);
-    setMessages([]);
-
-    // Clear localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_THREAD, newThreadId);
-      localStorage.setItem(STORAGE_KEY_MESSAGES, '[]');
-    }
-  };
 
   const handleStop = () => {
     if (abortController) {
@@ -118,16 +70,16 @@ export function ChatInterface() {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading || !threadId) return;
+    if (!input.trim() || isLoading || !activeConversationId) return;
 
-    const userMessage: Message = {
+    const userMessage = {
       id: crypto.randomUUID(),
-      role: 'user',
+      role: 'user' as const,
       content: input,
       timestamp: Date.now(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    addMessage(activeConversationId, userMessage);
     const currentInput = input;
     setInput('');
     setIsLoading(true);
@@ -148,7 +100,7 @@ export function ChatInterface() {
         body: JSON.stringify({
           message: currentInput,
           agent: selectedAgent,
-          threadId, // Persistent thread ID for this conversation
+          threadId: activeConversationId, // Use conversation ID as thread ID
           resourceId: 'default-user', // User identifier (can be enhanced later)
         }),
         signal: controller.signal,
@@ -247,27 +199,29 @@ export function ChatInterface() {
 
       // Add final assistant message with accumulated text
       const finalText = parser.getAccumulatedText();
-      if (finalText) {
-        const assistantMessage: Message = {
+      if (finalText && activeConversationId) {
+        const assistantMessage = {
           id: crypto.randomUUID(),
-          role: 'assistant',
+          role: 'assistant' as const,
           content: finalText,
           timestamp: Date.now(),
         };
-        setMessages((prev) => [...prev, assistantMessage]);
+        addMessage(activeConversationId, assistantMessage);
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {
         console.log('Request aborted by user');
       } else {
         console.error('Chat error:', error);
-        const errorMessage: Message = {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
-          timestamp: Date.now(),
-        };
-        setMessages((prev) => [...prev, errorMessage]);
+        if (activeConversationId) {
+          const errorMessage = {
+            id: crypto.randomUUID(),
+            role: 'assistant' as const,
+            content: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
+            timestamp: Date.now(),
+          };
+          addMessage(activeConversationId, errorMessage);
+        }
       }
     } finally {
       setIsLoading(false);
@@ -280,22 +234,9 @@ export function ChatInterface() {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header with New Conversation button */}
-      {isHydrated && messages.length > 0 && (
-        <div className="border-b p-3 flex justify-end">
-          <Button
-            onClick={handleNewConversation}
-            variant="outline"
-            size="sm"
-            disabled={isLoading}
-            className="gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            New Conversation
-          </Button>
-        </div>
-      )}
+    <div className="h-full flex">
+      {/* Main chat area */}
+      <div className="flex-1 flex flex-col">
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
@@ -320,15 +261,6 @@ export function ChatInterface() {
               content={message.content}
             />
           ))}
-
-          {/* Active tool calls */}
-          {activeToolCalls.length > 0 && (
-            <div className="space-y-2">
-              {activeToolCalls.map((toolCall) => (
-                <ToolCallCard key={toolCall.id} toolCall={toolCall} />
-              ))}
-            </div>
-          )}
 
           {/* Streaming message */}
           {isLoading && streamingContent && (
@@ -377,6 +309,14 @@ export function ChatInterface() {
           )}
         </div>
       </div>
+      </div>
+
+      {/* Activity Panel - Right sidebar */}
+      <ActivityPanel
+        toolCalls={activeToolCalls}
+        isRunning={isLoading}
+        hint={hint}
+      />
     </div>
   );
 }

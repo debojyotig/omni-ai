@@ -2,6 +2,7 @@
 
 import { MessageSquare, Settings } from 'lucide-react'
 import { useViewStore, type View } from '@/lib/stores/view-store'
+import { ThemeSwitcher } from '@/components/theme-switcher'
 
 export function ActivityBar() {
   const { activeView, setActiveView } = useViewStore()
@@ -36,6 +37,11 @@ export function ActivityBar() {
           </button>
         )
       })}
+
+      {/* Theme switcher at bottom */}
+      <div className="mt-auto">
+        <ThemeSwitcher />
+      </div>
     </div>
   )
 }
