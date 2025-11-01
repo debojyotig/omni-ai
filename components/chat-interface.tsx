@@ -15,6 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAgentStore } from '@/lib/stores/agent-store';
 import { useProgressStore } from '@/lib/stores/progress-store';
 import { TransparencyHint } from '@/components/transparency-hint';
+import { ChatMessage } from '@/components/chat-message';
 
 interface Message {
   id: string;
@@ -47,7 +48,7 @@ export function ChatInterface() {
     if (storedThread) {
       setThreadId(storedThread);
     } else {
-      const newThreadId = `thread-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const newThreadId = `thread-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
       setThreadId(newThreadId);
       localStorage.setItem(STORAGE_KEY_THREAD, newThreadId);
     }
@@ -284,32 +285,20 @@ export function ChatInterface() {
           )}
 
           {messages.map((message) => (
-            <div
+            <ChatMessage
               key={message.id}
-              className={`flex ${
-                message.role === 'user' ? 'justify-end' : 'justify-start'
-              }`}
-            >
-              <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                  message.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted'
-                }`}
-              >
-                <p className="whitespace-pre-wrap">{message.content}</p>
-              </div>
-            </div>
+              role={message.role}
+              content={message.content}
+            />
           ))}
 
           {/* Streaming message */}
           {isLoading && streamingContent && (
-            <div className="flex justify-start">
-              <div className="max-w-[80%] bg-muted rounded-lg px-4 py-2">
-                <p className="whitespace-pre-wrap">{streamingContent}</p>
-                <span className="inline-block w-2 h-4 ml-1 bg-foreground/50 animate-pulse" />
-              </div>
-            </div>
+            <ChatMessage
+              role="assistant"
+              content={streamingContent}
+              isStreaming={true}
+            />
           )}
 
           {/* Loading indicator */}

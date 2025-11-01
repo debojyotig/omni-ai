@@ -59,3 +59,55 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: hsl(from var(--color-muted-foreground) h s l / 0.5);
 }
+
+/* Prose styles for markdown rendering */
+.prose {
+  color: var(--color-foreground);
+  max-width: 65ch;
+}
+
+.prose :where(code):not(:where([class~="not-prose"] *)) {
+  color: var(--color-foreground);
+  font-weight: 400;
+  font-size: 0.875em;
+}
+
+.prose :where(code):not(:where([class~="not-prose"] *))::before,
+.prose :where(code):not(:where([class~="not-prose"] *))::after {
+  content: none;
+}
+
+.prose :where(pre):not(:where([class~="not-prose"] *)) {
+  background-color: transparent;
+  padding: 0;
+  margin: 0;
+}
+
+.prose :where(pre code):not(:where([class~="not-prose"] *)) {
+  background-color: transparent;
+  border-width: 0;
+  border-radius: 0;
+  padding: 0;
+  font-weight: inherit;
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+  line-height: inherit;
+}
+
+.prose-sm {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.prose-invert :where(strong):not(:where([class~="not-prose"] *)) {
+  color: var(--color-foreground);
+}
+
+.prose-invert :where(a):not(:where([class~="not-prose"] *)) {
+  color: var(--color-primary);
+}
+
+.prose-invert :where(code):not(:where([class~="not-prose"] *)) {
+  color: var(--color-foreground);
+}
