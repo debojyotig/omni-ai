@@ -232,10 +232,29 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
 ```
 
 **Validation**:
-- [ ] Cards collapse/expand
-- [ ] JSON formatted nicely
-- [ ] Long results scrollable
-- [ ] Matches omni-agent style
+- [x] Cards collapse/expand
+- [x] JSON formatted nicely
+- [x] Long results scrollable
+- [x] Matches omni-agent style
+
+**Status**: ✅ Complete (2025-11-01)
+**Implementation**:
+- Installed @radix-ui/react-collapsible
+- Created collapsible component (components/ui/collapsible.tsx)
+- Updated ToolCallCard to use Collapsible wrapper:
+  - Added useState for isOpen state
+  - CollapsibleTrigger on CardHeader with hover effect
+  - ChevronDown/ChevronRight icons to indicate state
+  - CollapsibleContent wraps arguments and results
+- Improved JSON display:
+  - Changed "Arguments" to "Input" and "Result" to "Output"
+  - Added max-height with overflow-y-auto (40px for input, 60px for output)
+  - Added border for better visual separation
+  - Improved padding and spacing (2.5px)
+  - Better error styling with borders
+- Cards start collapsed by default (cleaner UI)
+- Click header to expand/collapse details
+- Dev server running successfully
 
 ---
 
