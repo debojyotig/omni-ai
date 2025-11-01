@@ -13,7 +13,7 @@ export function ActivityBar() {
   ]
 
   return (
-    <div className="w-[72px] bg-background border-r flex flex-col items-center py-4 gap-2">
+    <div className="w-[72px] bg-background border-r flex flex-col items-center pt-4 pb-4 gap-2">
       {items.map((item) => {
         const Icon = item.icon
         return (
@@ -39,7 +39,7 @@ export function ActivityBar() {
       })}
 
       {/* Theme switcher at bottom */}
-      <div className="mt-auto">
+      <div className="mt-auto pt-2">
         <ThemeSwitcher />
       </div>
     </div>
