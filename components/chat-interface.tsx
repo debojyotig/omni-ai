@@ -28,6 +28,7 @@ export function ChatInterface() {
   const [streamingContent, setStreamingContent] = useState('');
   const [activeToolCalls, setActiveToolCalls] = useState<ToolCall[]>([]);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { selectedAgent } = useAgentStore();
@@ -42,10 +43,11 @@ export function ChatInterface() {
 
   // Get active conversation and its messages
   const activeConversation = getActiveConversation();
-  const messages = activeConversation?.messages ?? [];
+  const messages = isMounted ? (activeConversation?.messages ?? []) : [];
 
-  // Create initial conversation if none exists
+  // Hydration and initial conversation setup
   useEffect(() => {
+    setIsMounted(true);
     if (conversations.length === 0) {
       createConversation();
     }
