@@ -15,12 +15,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAgentStore } from '@/lib/stores/agent-store';
 import { useProgressStore } from '@/lib/stores/progress-store';
 import { useConversationStore } from '@/lib/stores/conversation-store';
+import { useActivityStore } from '@/lib/stores/activity-store';
 import { TransparencyHint } from '@/components/transparency-hint';
 import { ChatMessage } from '@/components/chat-message';
 import { StreamParser, getHintFromChunk } from '@/lib/claude-sdk/stream-parser';
 import { type ToolCall } from '@/components/tool-call-card';
 import { MessageSkeleton } from '@/components/message-skeleton';
-import { ActivityPanel } from '@/components/activity-panel';
 import { ErrorMessage } from '@/components/error-message';
 
 export function ChatInterface() {
@@ -42,6 +42,7 @@ export function ChatInterface() {
     addMessage,
     getActiveConversation,
   } = useConversationStore();
+  const { addStep, updateStep, completeStep, clearSteps, setThreadId } = useActivityStore();
 
   // Get active conversation and its messages
   const activeConversation = getActiveConversation();
@@ -92,11 +93,22 @@ export function ChatInterface() {
     setActiveToolCalls([]); // Clear previous tool calls
     setError(null); // Clear previous errors
 
+    // Clear previous activity steps and set thread ID
+    clearSteps();
+    setThreadId(activeConversationId);
+
     const controller = new AbortController();
     setAbortController(controller);
 
     try {
       setHint('Connecting to agent...');
+
+      // Add initial thinking step
+      addStep({
+        type: 'thinking',
+        title: 'Planning investigation',
+        status: 'running',
+      });
 
       // Call API with SSE streaming
       const response = await fetch('/api/chat', {
@@ -166,8 +178,22 @@ export function ChatInterface() {
                 break;
 
               case 'tool_use':
-                // Tool call detected - add to active tool calls
+                // Tool call detected - add to activity panel
                 console.log(`[STREAM] Tool called: ${parsedChunk.displayName}`);
+
+                // Add step to activity panel
+                addStep({
+                  type: 'tool_call',
+                  title: parsedChunk.displayName || 'Tool execution',
+                  description: parsedChunk.input ? `Parameters: ${JSON.stringify(parsedChunk.input).substring(0, 100)}...` : undefined,
+                  status: 'running',
+                  metadata: {
+                    toolId: parsedChunk.id,
+                    input: parsedChunk.input,
+                  },
+                });
+
+                // Keep tool calls for backward compatibility
                 const newToolCall: ToolCall = {
                   id: parsedChunk.id,
                   name: parsedChunk.displayName,
@@ -232,9 +258,7 @@ export function ChatInterface() {
   };
 
   return (
-    <div className="h-full flex">
-      {/* Main chat area */}
-      <div className="flex-1 flex flex-col">
+    <div className="h-full flex flex-col">
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
@@ -315,14 +339,6 @@ export function ChatInterface() {
           )}
         </div>
       </div>
-      </div>
-
-      {/* Activity Panel - Right sidebar */}
-      <ActivityPanel
-        toolCalls={activeToolCalls}
-        isRunning={isLoading}
-        hint={hint}
-      />
     </div>
   );
 }
