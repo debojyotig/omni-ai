@@ -58,11 +58,11 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
         </SidebarMenu>
 
         {/* Action Buttons */}
-        <div className="flex flex-col gap-2 px-2 py-2">
+        <div className={`flex flex-col gap-2 px-2 py-2 ${state === "collapsed" ? "items-center" : ""}`}>
           <Button
             variant="ghost"
             size={state === "collapsed" ? "icon" : "default"}
-            className={state === "collapsed" ? "" : "w-full justify-start"}
+            className={state === "collapsed" ? "h-10 w-10" : "w-full justify-start"}
             onClick={() => createConversation()}
             title="New conversation"
           >
@@ -72,7 +72,7 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
           <Button
             variant="ghost"
             size={state === "collapsed" ? "icon" : "default"}
-            className={state === "collapsed" ? "" : "w-full justify-start"}
+            className={state === "collapsed" ? "h-10 w-10" : "w-full justify-start"}
             onClick={() => setSearchOpen(true)}
             title="Search chats"
           >
@@ -132,12 +132,15 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
       )}
 
       <SidebarFooter>
-        <div className="px-2 py-2">
+        <div className={`px-2 py-2 ${state === "collapsed" ? "flex justify-center" : ""}`}>
           <Button
             variant="ghost"
             size={state === "collapsed" ? "icon" : "default"}
-            className={state === "collapsed" ? "" : "w-full justify-start"}
-            onClick={() => setActiveView("settings")}
+            className={state === "collapsed" ? "h-10 w-10" : "w-full justify-start"}
+            onClick={() => {
+              console.log("Settings clicked, setting view to settings")
+              setActiveView("settings")
+            }}
             title="Settings"
           >
             <Settings className="size-4" />
