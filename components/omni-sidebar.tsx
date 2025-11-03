@@ -1,15 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { MessageSquare, Plus, Settings, Trash2 } from "lucide-react"
+import { MessageSquare, Plus, Search, Trash2 } from "lucide-react"
 import { useConversationStore } from "@/lib/stores/conversation-store"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuAction,
@@ -20,8 +17,10 @@ import {
 import { Button } from "@/components/ui/button"
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import { NavUser } from "@/components/nav-user"
+import { SearchChatsModal } from "@/components/search-chats-modal"
 
 export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const [searchOpen, setSearchOpen] = React.useState(false)
   const {
     conversations,
     activeConversationId,
@@ -30,27 +29,9 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
     deleteConversation,
   } = useConversationStore()
 
-  const formatTimestamp = (timestamp: number) => {
-    const now = Date.now()
-    const diff = now - timestamp
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-    if (days === 0) return 'Today'
-    if (days === 1) return 'Yesterday'
-    if (days < 7) return `${days} days ago`
-    return new Date(timestamp).toLocaleDateString()
-  }
-
-  // Group conversations by date
-  const groupedConversations = React.useMemo(() => {
-    const groups: Record<string, typeof conversations> = {}
-    conversations.forEach((conv) => {
-      const label = formatTimestamp(conv.updatedAt)
-      if (!groups[label]) {
-        groups[label] = []
-      }
-      groups[label].push(conv)
-    })
-    return groups
+  // Sort conversations by updated date (most recent first)
+  const sortedConversations = React.useMemo(() => {
+    return [...conversations].sort((a, b) => b.updatedAt - a.updatedAt)
   }, [conversations])
 
   return (
@@ -72,51 +53,60 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
           </SidebarMenuItem>
         </SidebarMenu>
 
-        {/* New Conversation Button */}
-        <div className="px-2 py-2">
+        {/* Action Buttons */}
+        <div className="flex gap-2 px-2 py-2">
           <Button
             variant="outline"
-            className="w-full justify-start gap-2"
+            size="icon"
+            className="flex-1"
             onClick={() => createConversation()}
+            title="New chat"
           >
             <Plus className="size-4" />
-            <span>New Chat</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="flex-1"
+            onClick={() => setSearchOpen(true)}
+            title="Search chats"
+          >
+            <Search className="size-4" />
           </Button>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
-        {Object.entries(groupedConversations).map(([label, convs]) => (
-          <SidebarGroup key={label}>
-            <SidebarGroupLabel>{label}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {convs.map((conversation) => (
-                  <SidebarMenuItem key={conversation.id}>
-                    <SidebarMenuButton
-                      isActive={activeConversationId === conversation.id}
-                      onClick={() => setActiveConversation(conversation.id)}
-                      tooltip={conversation.title}
-                    >
-                      <MessageSquare className="size-4" />
-                      <span className="flex-1 truncate">{conversation.title}</span>
-                    </SidebarMenuButton>
-                    <SidebarMenuAction
-                      showOnHover
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        deleteConversation(conversation.id)
-                      }}
-                    >
-                      <Trash2 className="size-4" />
-                      <span className="sr-only">Delete conversation</span>
-                    </SidebarMenuAction>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+        <SidebarMenu>
+          {sortedConversations.length === 0 ? (
+            <div className="text-center text-sm text-muted-foreground py-8 px-4">
+              No chats yet. Click the + button to start a new chat.
+            </div>
+          ) : (
+            sortedConversations.map((conversation) => (
+              <SidebarMenuItem key={conversation.id}>
+                <SidebarMenuButton
+                  isActive={activeConversationId === conversation.id}
+                  onClick={() => setActiveConversation(conversation.id)}
+                  tooltip={conversation.title}
+                >
+                  <MessageSquare className="size-4" />
+                  <span className="flex-1 truncate">{conversation.title}</span>
+                </SidebarMenuButton>
+                <SidebarMenuAction
+                  showOnHover
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    deleteConversation(conversation.id)
+                  }}
+                >
+                  <Trash2 className="size-4" />
+                  <span className="sr-only">Delete conversation</span>
+                </SidebarMenuAction>
+              </SidebarMenuItem>
+            ))
+          )}
+        </SidebarMenu>
       </SidebarContent>
 
       <SidebarFooter>
@@ -130,6 +120,9 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
       </SidebarFooter>
 
       <SidebarRail />
+
+      {/* Search Modal */}
+      <SearchChatsModal open={searchOpen} onOpenChange={setSearchOpen} />
     </Sidebar>
   )
 }
