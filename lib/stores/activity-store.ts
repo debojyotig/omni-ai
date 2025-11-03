@@ -8,6 +8,7 @@ export interface ActivityStep {
   status: 'running' | 'done' | 'error'
   timestamp: number
   duration?: number
+  icon?: 'web' | 'dot' | 'spinner' | 'api' | 'graphql' | 'check' // Icon type for timeline
   sources?: Array<{
     name: string
     url: string

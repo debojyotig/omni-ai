@@ -78,6 +78,11 @@ export class StreamParser {
       return this.parseAssistantChunk(rawChunk);
     }
 
+    // Tool result chunk (tool execution completed)
+    if (rawChunk.type === 'tool_result') {
+      return this.parseToolResultChunk(rawChunk);
+    }
+
     // Result chunk (final response)
     if (rawChunk.type === 'result') {
       return this.parseResultChunk(rawChunk);
@@ -114,6 +119,25 @@ export class StreamParser {
   private parseAssistantChunk(chunk: any): ParsedChunk | null {
     const content = chunk.message.content;
 
+    // Extract tool results first (they come before new tool uses)
+    const toolResults = content.filter((c: any) => c.type === 'tool_result');
+    if (toolResults.length > 0) {
+      // Return first tool result (we'll get called again for others)
+      const toolResult = toolResults[0];
+      const toolUseId = toolResult.tool_use_id;
+      const toolCall = this.activeToolCalls.get(toolUseId);
+
+      console.log(`[PARSER] Found tool_result for toolUseId: ${toolUseId}, toolName: ${toolCall?.name || 'unknown'}`);
+
+      return {
+        type: 'tool_result',
+        toolUseId: toolUseId,
+        name: toolCall?.name || 'unknown',
+        result: toolResult.content,
+        isError: toolResult.is_error || false,
+      };
+    }
+
     // Extract text content
     const textParts = content.filter((c: any) => c.type === 'text');
     if (textParts.length > 0) {
@@ -143,6 +167,22 @@ export class StreamParser {
     }
 
     return null;
+  }
+
+  /**
+   * Parse tool result chunk (tool execution completed)
+   */
+  private parseToolResultChunk(chunk: any): ParsedToolResultChunk {
+    const toolUseId = chunk.tool_use_id || chunk.toolUseId || chunk.id;
+    const toolCall = this.activeToolCalls.get(toolUseId);
+
+    return {
+      type: 'tool_result',
+      toolUseId: toolUseId,
+      name: toolCall?.name || 'unknown',
+      result: chunk.result || chunk.content,
+      isError: chunk.is_error || chunk.isError || false,
+    };
   }
 
   /**

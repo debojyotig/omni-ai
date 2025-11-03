@@ -11,27 +11,27 @@ import { useState, useEffect, useRef } from 'react';
 import { Send, Loader2, StopCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAgentStore } from '@/lib/stores/agent-store';
 import { useProgressStore } from '@/lib/stores/progress-store';
 import { useConversationStore } from '@/lib/stores/conversation-store';
 import { useActivityStore } from '@/lib/stores/activity-store';
-import { TransparencyHint } from '@/components/transparency-hint';
 import { ChatMessage } from '@/components/chat-message';
 import { StreamParser, getHintFromChunk } from '@/lib/claude-sdk/stream-parser';
-import { type ToolCall } from '@/components/tool-call-card';
-import { MessageSkeleton } from '@/components/message-skeleton';
 import { ErrorMessage } from '@/components/error-message';
+import { formatActivityTitle, formatActivityDescription, getActivityIcon, generatePlanningGist } from '@/lib/utils/activity-formatter';
 
 export function ChatInterface() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
-  const [activeToolCalls, setActiveToolCalls] = useState<ToolCall[]>([]);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Track step IDs for completion
+  const planningStepRef = useRef<string | null>(null);
+  const toolStepsRef = useRef<Map<string, { stepId: string; startTime: number }>>(new Map());
 
   const { selectedAgent } = useAgentStore();
   const { setRunning, setHint, reset: resetProgress, hint } = useProgressStore();
@@ -59,7 +59,12 @@ export function ChatInterface() {
   // Auto-scroll to bottom
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      // Use requestAnimationFrame for smooth scrolling
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      });
     }
   }, [messages, streamingContent]);
 
@@ -90,12 +95,12 @@ export function ChatInterface() {
     setIsLoading(true);
     setRunning(true);
     setStreamingContent('');
-    setActiveToolCalls([]); // Clear previous tool calls
     setError(null); // Clear previous errors
 
     // Clear previous activity steps, set thread ID, and open activity panel
     clearSteps();
     setThreadId(activeConversationId);
+    toolStepsRef.current.clear();
     const { setOpen } = useActivityStore.getState();
     setOpen(true); // Auto-open activity panel for new messages
 
@@ -105,12 +110,23 @@ export function ChatInterface() {
     try {
       setHint('Connecting to agent...');
 
-      // Add initial thinking step
+      // Add initial thinking step with planning gist
+      const { steps } = useActivityStore.getState();
+      const initialStepCount = steps.length;
+      const planningGist = generatePlanningGist(currentInput);
       addStep({
         type: 'thinking',
-        title: 'Planning investigation',
+        title: 'Planning',
+        description: planningGist,
         status: 'running',
+        icon: 'spinner',
       });
+
+      // Get the ID of the step we just added
+      const updatedSteps = useActivityStore.getState().steps;
+      if (updatedSteps.length > initialStepCount) {
+        planningStepRef.current = updatedSteps[updatedSteps.length - 1].id;
+      }
 
       // Call API with SSE streaming
       const response = await fetch('/api/chat', {
@@ -161,6 +177,12 @@ export function ChatInterface() {
             const jsonStr = line.slice(6); // Remove 'data: ' prefix
             const rawChunk = JSON.parse(jsonStr);
 
+            // Debug: Log raw chunk structure
+            if (rawChunk.type === 'assistant' && rawChunk.message?.content) {
+              const contentTypes = rawChunk.message.content.map((c: any) => c.type).join(', ');
+              console.log(`[STREAM DEBUG] Assistant chunk with content types: ${contentTypes}`);
+            }
+
             // Parse chunk with StreamParser
             const parsedChunk = parser.parseChunk(rawChunk);
 
@@ -176,34 +198,68 @@ export function ChatInterface() {
             switch (parsedChunk.type) {
               case 'text':
                 // Update streaming content with accumulated text
+                console.log(`[STREAM] Text chunk received, length: ${parsedChunk.content.length}, accumulated: ${parsedChunk.accumulatedText.length}`);
                 setStreamingContent(parsedChunk.accumulatedText);
                 break;
 
               case 'tool_use':
-                // Tool call detected - add to activity panel
-                console.log(`[STREAM] Tool called: ${parsedChunk.displayName}`);
+                // Tool call detected - add to activity panel with formatted name
+                const toolName = parsedChunk.displayName || 'Tool execution';
+                const formattedTitle = formatActivityTitle(toolName, parsedChunk.input);
+                const formattedDescription = formatActivityDescription(toolName, parsedChunk.input);
+                const icon = getActivityIcon(toolName, parsedChunk.input);
 
-                // Add step to activity panel
+                console.log(`[STREAM] Tool called: ${toolName} -> ${formattedTitle}`);
+
+                // Complete planning step if this is the first tool
+                if (planningStepRef.current && toolStepsRef.current.size === 0) {
+                  const planningStartTime = useActivityStore.getState().steps.find(
+                    s => s.id === planningStepRef.current
+                  )?.timestamp || Date.now();
+                  completeStep(planningStepRef.current, Date.now() - planningStartTime);
+                  planningStepRef.current = null;
+                }
+
+                // Get current step count before adding
+                const currentSteps = useActivityStore.getState().steps;
+                const currentStepCount = currentSteps.length;
+
+                // Add step to activity panel with human-readable description
                 addStep({
                   type: 'tool_call',
-                  title: parsedChunk.displayName || 'Tool execution',
-                  description: parsedChunk.input ? `Parameters: ${JSON.stringify(parsedChunk.input).substring(0, 100)}...` : undefined,
+                  title: formattedTitle,
+                  description: formattedDescription,
                   status: 'running',
+                  icon: icon,
                   metadata: {
                     toolId: parsedChunk.id,
+                    toolName: toolName,
                     input: parsedChunk.input,
                   },
                 });
 
-                // Keep tool calls for backward compatibility
-                const newToolCall: ToolCall = {
-                  id: parsedChunk.id,
-                  name: parsedChunk.displayName,
-                  arguments: parsedChunk.input,
-                  status: 'running',
-                  startTime: Date.now(),
-                };
-                setActiveToolCalls((prev) => [...prev, newToolCall]);
+                // Track the new step ID
+                const newSteps = useActivityStore.getState().steps;
+                if (newSteps.length > currentStepCount) {
+                  const newStepId = newSteps[newSteps.length - 1].id;
+                  toolStepsRef.current.set(parsedChunk.id, {
+                    stepId: newStepId,
+                    startTime: Date.now(),
+                  });
+                }
+                break;
+
+              case 'tool_result':
+                // Tool execution completed - mark step as done
+                const toolStepInfo = toolStepsRef.current.get(parsedChunk.toolUseId);
+                if (toolStepInfo) {
+                  const duration = Date.now() - toolStepInfo.startTime;
+                  completeStep(toolStepInfo.stepId, duration);
+                  toolStepsRef.current.delete(parsedChunk.toolUseId);
+                  console.log(`[STREAM] Tool completed: ${parsedChunk.name} (${duration}ms), stepId: ${toolStepInfo.stepId}`);
+                } else {
+                  console.warn(`[STREAM] Tool result received but no step found for toolUseId: ${parsedChunk.toolUseId}`);
+                }
                 break;
 
               case 'thinking':
@@ -250,6 +306,35 @@ export function ChatInterface() {
         setError(error instanceof Error ? error : new Error(String(error)));
       }
     } finally {
+      // Complete any remaining running steps
+      const currentSteps = useActivityStore.getState().steps;
+      let totalDuration = 0;
+
+      currentSteps.forEach((step) => {
+        if (step.status === 'running') {
+          const duration = Date.now() - step.timestamp;
+          completeStep(step.id, duration);
+        }
+      });
+
+      // Calculate total thinking time
+      if (currentSteps.length > 0) {
+        const firstStep = currentSteps[0];
+        totalDuration = Date.now() - firstStep.timestamp;
+
+        // Add "Thought for Xs" summary
+        addStep({
+          type: 'complete',
+          title: `Thought for ${(totalDuration / 1000).toFixed(0)}s`,
+          status: 'done',
+          icon: 'check',
+        });
+      }
+
+      // Clear refs
+      planningStepRef.current = null;
+      toolStepsRef.current.clear();
+
       setIsLoading(false);
       setRunning(false);
       setStreamingContent('');
@@ -259,105 +344,158 @@ export function ChatInterface() {
     }
   };
 
-  return (
-    <div className="h-full flex flex-col">
+  // Check if we should center the input (empty state with no messages and not loading)
+  const shouldCenterInput = messages.length === 0 && !isLoading;
 
-      {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-        <div className="space-y-4 max-w-3xl mx-auto">
-          {messages.length === 0 && (
-            <div className="text-center text-muted-foreground py-12">
-              <p className="text-lg">Ask me anything about your services</p>
-              <p className="text-sm mt-2">
+  return (
+    <div className="h-full w-full flex flex-col relative">
+      {shouldCenterInput ? (
+        // Empty state: Centered input like ChatGPT
+        <div className="flex-1 flex flex-col items-center justify-center p-4">
+          <div className="w-full max-w-3xl">
+            <div className="text-center text-muted-foreground mb-12">
+              <p className="text-2xl font-semibold text-foreground mb-2">Ask me anything about your services</p>
+              <p className="text-sm">
                 I can investigate errors, correlate data, and more.
               </p>
-              <p className="text-xs mt-4 text-muted-foreground/70">
-                Press <kbd className="px-1.5 py-0.5 text-xs border rounded">Cmd</kbd> +{' '}
-                <kbd className="px-1.5 py-0.5 text-xs border rounded">K</kbd> for quick actions
-              </p>
             </div>
-          )}
 
-          {messages.map((message) => (
-            <ChatMessage
-              key={message.id}
-              role={message.role}
-              content={message.content}
-            />
-          ))}
-
-          {/* Streaming message */}
-          {isLoading && streamingContent && (
-            <>
-              <ChatMessage
-                role="assistant"
-                content={streamingContent}
-                isStreaming={true}
+            {/* Centered Input */}
+            <div className="relative flex items-center">
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Ask about errors, data inconsistencies, or service status..."
+                className="w-full h-[40px] min-h-[40px] max-h-[200px] resize-none rounded-[24px] px-5 py-2 pr-14 border border-input bg-background shadow-sm focus:border-ring focus:ring-1 focus:ring-ring transition-all duration-200 ease-in-out"
+                disabled={isLoading}
+                aria-label="Message input"
               />
+              <Button
+                onClick={handleSend}
+                disabled={!input.trim()}
+                variant="ghost"
+                size="icon"
+                className="absolute right-2.5 top-2 h-8 w-8 rounded-full hover:bg-muted disabled:opacity-40"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <p className="text-xs mt-4 text-center text-muted-foreground/70">
+              Press <kbd className="px-1.5 py-0.5 text-xs border rounded">Cmd</kbd> +{' '}
+              <kbd className="px-1.5 py-0.5 text-xs border rounded">K</kbd> for quick actions
+            </p>
+          </div>
+        </div>
+      ) : (
+        // Active chat: Messages with independent scroll + floating input
+        <>
+          {/* Messages - Full height scrollable area */}
+          <div className="absolute inset-0 overflow-y-auto" ref={scrollRef}>
+            <div className="pb-40">
+              {messages.map((message) => (
+                <ChatMessage
+                  key={message.id}
+                  role={message.role}
+                  content={message.content}
+                />
+              ))}
+
+              {/* Streaming assistant message */}
+              {isLoading && streamingContent && (
+                <ChatMessage
+                  key="streaming-message"
+                  role="assistant"
+                  content={streamingContent}
+                  isStreaming
+                />
+              )}
 
               {/* Thinking indicator - clickable to toggle activity panel */}
-              <div className="flex items-center gap-2 text-sm text-muted-foreground ml-12 -mt-2">
-                <button
-                  onClick={() => {
-                    const { isOpen, setOpen } = useActivityStore.getState()
-                    setOpen(!isOpen)
+              {isLoading && !streamingContent && (
+                <div className="max-w-3xl mx-auto px-4">
+                  <div className="flex items-center gap-4 py-6">
+                    <div className="h-8 w-8" /> {/* Spacer for avatar alignment */}
+                    <button
+                      onClick={() => {
+                        const { isOpen, setOpen } = useActivityStore.getState()
+                        setOpen(!isOpen)
+                      }}
+                      className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer py-1 px-2 rounded hover:bg-muted group"
+                      title="Toggle activity panel"
+                    >
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span className="text-xs">Thinking...</span>
+                      <span className="text-xs opacity-50 group-hover:opacity-100 transition-opacity">›</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Error display */}
+              {error && (
+                <div className="max-w-3xl mx-auto px-4 py-6">
+                  <ErrorMessage
+                    error={error}
+                    title="Failed to get response"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Gradient fade effect - masks content scrolling behind input */}
+          <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background via-background to-transparent pointer-events-none z-10" />
+
+          {/* Input - Fixed floating at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 bg-background z-20">
+            <div className="max-w-3xl mx-auto px-4 pb-5 pt-2">
+              <div className="relative flex items-start shadow-sm">
+                <Textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
                   }}
-                  className="flex items-center gap-2 hover:text-foreground transition-colors cursor-pointer py-1 px-2 rounded hover:bg-muted"
-                  title="Toggle activity panel"
-                >
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  <span className="text-xs">Thinking...</span>
-                </button>
+                  placeholder="Ask about errors, data inconsistencies, or service status..."
+                  className="w-full h-[40px] min-h-[40px] max-h-[200px] resize-none rounded-[24px] px-5 py-2 pr-14 border border-input bg-background shadow-sm focus:border-ring focus:ring-1 focus:ring-ring transition-all duration-200 ease-in-out"
+                  disabled={isLoading}
+                  aria-label="Message input"
+                />
+                {isLoading ? (
+                  <Button
+                    onClick={handleStop}
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2.5 top-2 h-8 w-8 rounded-full hover:bg-muted"
+                  >
+                    <StopCircle className="w-4 h-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleSend}
+                    disabled={!input.trim()}
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2.5 top-2 h-8 w-8 rounded-full hover:bg-muted disabled:opacity-40"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
-            </>
-          )}
-
-          {/* Loading skeleton */}
-          {isLoading && !streamingContent && activeToolCalls.length === 0 && (
-            <MessageSkeleton />
-          )}
-
-          {/* Error display */}
-          {error && (
-            <ErrorMessage
-              error={error}
-              title="Failed to get response"
-            />
-          )}
-        </div>
-      </ScrollArea>
-
-      {/* Progressive Transparency Hint */}
-      <TransparencyHint />
-
-      {/* Input */}
-      <div className="border-t p-4">
-        <div className="max-w-3xl mx-auto flex gap-2">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            placeholder="Ask about errors, data inconsistencies, or service status..."
-            className="min-h-[60px] max-h-[200px] resize-none"
-            disabled={isLoading}
-            aria-label="Message input"
-          />
-          {isLoading ? (
-            <Button onClick={handleStop} variant="destructive">
-              <StopCircle className="w-4 h-4" />
-            </Button>
-          ) : (
-            <Button onClick={handleSend} disabled={!input.trim()}>
-              <Send className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
-      </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

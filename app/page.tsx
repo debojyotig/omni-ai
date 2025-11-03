@@ -16,8 +16,8 @@ export default function Home() {
   return (
     <SidebarProvider>
       <OmniSidebar />
-      <SidebarInset className="flex flex-row">
-        <div className="flex-1 flex flex-col min-w-0">
+      <SidebarInset className="flex flex-row overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Header with sidebar trigger */}
           <header className="flex h-14 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-14">
             <div className="flex w-full items-center gap-2 px-4">
@@ -29,14 +29,16 @@ export default function Home() {
             </div>
           </header>
 
-          {/* Main content area */}
-          <div className="flex flex-1 flex-col overflow-hidden">
+          {/* Main content area - isolated scroll container */}
+          <div className="flex flex-1 flex-col overflow-hidden min-h-0">
             <IterationProgress />
-            <ChatInterface />
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <ChatInterface />
+            </div>
           </div>
         </div>
 
-        {/* Right Activity Panel */}
+        {/* Right Activity Panel - isolated scroll container */}
         <ActivityPanel />
       </SidebarInset>
     </SidebarProvider>
