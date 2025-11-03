@@ -372,7 +372,7 @@ export function ChatInterface() {
                   }
                 }}
                 placeholder="Ask about errors, data inconsistencies, or service status..."
-                className="w-full h-[40px] min-h-[40px] max-h-[200px] resize-none rounded-[24px] px-5 py-2 pr-14 border border-input bg-background shadow-sm focus:border-ring focus:ring-1 focus:ring-ring transition-all duration-200 ease-in-out"
+                className="w-full h-[40px] min-h-[40px] max-h-[200px] resize-none rounded-[24px] px-5 py-2 pr-14 border border-input bg-background focus:border-ring focus:ring-1 focus:ring-ring transition-all duration-200 ease-in-out"
                 disabled={isLoading}
                 aria-label="Message input"
               />
@@ -456,7 +456,7 @@ export function ChatInterface() {
           {/* Input - Fixed floating at bottom */}
           <div className="absolute bottom-0 left-0 right-0 bg-background z-20">
             <div className="max-w-3xl mx-auto px-4 pb-5 pt-2">
-              <div className="relative flex items-start shadow-sm">
+              <div className="relative flex items-start">
                 <Textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -467,7 +467,7 @@ export function ChatInterface() {
                     }
                   }}
                   placeholder="Ask about errors, data inconsistencies, or service status..."
-                  className="w-full h-[40px] min-h-[40px] max-h-[200px] resize-none rounded-[24px] px-5 py-2 pr-14 border border-input bg-background shadow-sm focus:border-ring focus:ring-1 focus:ring-ring transition-all duration-200 ease-in-out"
+                  className="w-full h-[40px] min-h-[40px] max-h-[200px] resize-none rounded-[24px] px-5 py-2 pr-14 border border-input bg-background focus:border-ring focus:ring-1 focus:ring-ring transition-all duration-200 ease-in-out"
                   disabled={isLoading}
                   aria-label="Message input"
                 />
