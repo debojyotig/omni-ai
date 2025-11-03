@@ -9,5 +9,8 @@ interface ViewState {
 
 export const useViewStore = create<ViewState>((set) => ({
   activeView: 'chat',
-  setActiveView: (view) => set({ activeView: view })
+  setActiveView: (view) => {
+    console.log('[VIEW-STORE] setActiveView called with:', view)
+    set({ activeView: view })
+  }
 }))
