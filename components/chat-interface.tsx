@@ -36,7 +36,6 @@ export function ChatInterface() {
   const { selectedAgent } = useAgentStore();
   const { setRunning, setHint, reset: resetProgress, hint } = useProgressStore();
   const {
-    conversations,
     activeConversationId,
     createConversation,
     addMessage,
@@ -51,9 +50,19 @@ export function ChatInterface() {
   // Hydration and initial conversation setup
   useEffect(() => {
     setIsMounted(true);
-    if (conversations.length === 0) {
-      createConversation();
-    }
+    // Wait for store to rehydrate from localStorage before creating a conversation
+    const checkRehydration = () => {
+      const state = useConversationStore.getState() as any;
+      if (state._hasHydrated) {
+        if (state.conversations.length === 0) {
+          createConversation();
+        }
+      } else {
+        // Check again after a short delay
+        setTimeout(checkRehydration, 50);
+      }
+    };
+    checkRehydration();
   }, []);
 
   // Auto-scroll to bottom

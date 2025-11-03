@@ -37,11 +37,18 @@ interface ConversationStore {
   clearAllConversations: () => void
 }
 
-export const useConversationStore = create<ConversationStore>()(
+interface ConversationStoreWithRehydrate extends ConversationStore {
+  _hasHydrated?: boolean
+  setHasHydrated?: (state: boolean) => void
+}
+
+export const useConversationStore = create<ConversationStoreWithRehydrate>()(
   persist(
     (set, get) => ({
       conversations: [],
       activeConversationId: null,
+      _hasHydrated: false,
+      setHasHydrated: (state: boolean) => set({ _hasHydrated: state }),
 
       createConversation: () => {
         const id = `conv-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
@@ -122,6 +129,11 @@ export const useConversationStore = create<ConversationStore>()(
     }),
     {
       name: 'omni-ai-conversations',
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state._hasHydrated = true
+        }
+      },
     }
   )
 )
