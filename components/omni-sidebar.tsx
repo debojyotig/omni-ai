@@ -90,9 +90,9 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
 
       {/* Only show Chat section when sidebar is expanded */}
       {state !== "collapsed" && (
-        <SidebarContent>
-          <SidebarMenu>
-            <Collapsible open={chatsOpen} onOpenChange={setChatsOpen} className="group/collapsible">
+        <SidebarContent className="pointer-events-auto">
+          <SidebarMenu className="pointer-events-auto">
+            <Collapsible open={chatsOpen} onOpenChange={setChatsOpen} className="group/collapsible pointer-events-auto">
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton className="gap-2 pointer-events-auto">
@@ -111,7 +111,10 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
                         <SidebarMenuItem key={conversation.id}>
                           <SidebarMenuButton
                             isActive={activeConversationId === conversation.id}
-                            onClick={() => setActiveConversation(conversation.id)}
+                            onClick={() => {
+                              setActiveView("chat")
+                              setActiveConversation(conversation.id)
+                            }}
                             tooltip={conversation.title}
                             className="gap-2 pl-2 pointer-events-auto"
                           >
