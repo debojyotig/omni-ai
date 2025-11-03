@@ -63,7 +63,10 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
             variant="ghost"
             size={state === "collapsed" ? "icon" : "default"}
             className={state === "collapsed" ? "h-10 w-10" : "w-full justify-start"}
-            onClick={() => createConversation()}
+            onClick={() => {
+              setActiveView("chat")
+              createConversation()
+            }}
             title="New conversation"
           >
             <Plus className="size-4" />
@@ -73,7 +76,10 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
             variant="ghost"
             size={state === "collapsed" ? "icon" : "default"}
             className={state === "collapsed" ? "h-10 w-10" : "w-full justify-start"}
-            onClick={() => setSearchOpen(true)}
+            onClick={() => {
+              setActiveView("chat")
+              setSearchOpen(true)
+            }}
             title="Search chats"
           >
             <Search className="size-4" />

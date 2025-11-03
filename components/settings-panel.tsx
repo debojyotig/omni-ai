@@ -11,7 +11,9 @@ import { useEffect, useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { CheckCircle2, XCircle, Info, AlertTriangle } from 'lucide-react'
+import { CheckCircle2, XCircle, Info, AlertTriangle, ChevronLeft } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { useViewStore } from '@/lib/stores/view-store'
 import { AgentConfigTab } from '@/components/agent-config-tab'
 
 interface ProviderInfo {
@@ -41,6 +43,7 @@ export function SettingsPanel() {
   const [providerData, setProviderData] = useState<ProviderData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { setActiveView } = useViewStore()
 
   // Fetch provider info on mount
   useEffect(() => {
@@ -70,12 +73,23 @@ export function SettingsPanel() {
   return (
     <div className="h-full overflow-auto">
       <div className="max-w-2xl mx-auto p-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Settings</h1>
-          <p className="text-muted-foreground">
-            View provider configuration and manage agent behavior
-          </p>
+        {/* Header with back button */}
+        <div className="mb-8 flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setActiveView('chat')}
+            className="h-10 w-10"
+            title="Back to chat"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold mb-2">Settings</h1>
+            <p className="text-muted-foreground">
+              View provider configuration and manage agent behavior
+            </p>
+          </div>
         </div>
 
         {/* Loading State */}
