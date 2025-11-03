@@ -62,7 +62,7 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
           <Button
             variant="ghost"
             size={state === "collapsed" ? "icon" : "default"}
-            className={state === "collapsed" ? "h-10 w-10" : "w-full justify-start"}
+            className={`${state === "collapsed" ? "h-10 w-10" : "w-full justify-start"} pointer-events-auto`}
             onClick={() => {
               setActiveView("chat")
               createConversation()
@@ -75,7 +75,7 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
           <Button
             variant="ghost"
             size={state === "collapsed" ? "icon" : "default"}
-            className={state === "collapsed" ? "h-10 w-10" : "w-full justify-start"}
+            className={`${state === "collapsed" ? "h-10 w-10" : "w-full justify-start"} pointer-events-auto`}
             onClick={() => {
               setActiveView("chat")
               setSearchOpen(true)
@@ -95,7 +95,7 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
             <Collapsible open={chatsOpen} onOpenChange={setChatsOpen} className="group/collapsible">
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
-                  <SidebarMenuButton className="gap-2">
+                  <SidebarMenuButton className="gap-2 pointer-events-auto">
                     <span>Chats</span>
                     <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
                   </SidebarMenuButton>
@@ -113,12 +113,13 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
                             isActive={activeConversationId === conversation.id}
                             onClick={() => setActiveConversation(conversation.id)}
                             tooltip={conversation.title}
-                            className="gap-2 pl-2"
+                            className="gap-2 pl-2 pointer-events-auto"
                           >
                             <span className="flex-1 truncate text-sm">{conversation.title}</span>
                           </SidebarMenuButton>
                           <SidebarMenuAction
                             showOnHover
+                            className="pointer-events-auto"
                             onClick={(e) => {
                               e.stopPropagation()
                               deleteConversation(conversation.id)
@@ -142,7 +143,7 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
           <Button
             variant="ghost"
             size={state === "collapsed" ? "icon" : "default"}
-            className={state === "collapsed" ? "h-10 w-10" : "w-full justify-start"}
+            className={`${state === "collapsed" ? "h-10 w-10" : "w-full justify-start"} pointer-events-auto`}
             onClick={() => setActiveView("settings")}
             title="Settings"
           >
