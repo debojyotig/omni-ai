@@ -62,7 +62,7 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
           <Button
             variant="ghost"
             size={state === "collapsed" ? "icon" : "default"}
-            className={state === "collapsed" ? "" : "justify-start"}
+            className={state === "collapsed" ? "" : "w-full justify-start"}
             onClick={() => createConversation()}
             title="New conversation"
           >
@@ -72,7 +72,7 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
           <Button
             variant="ghost"
             size={state === "collapsed" ? "icon" : "default"}
-            className={state === "collapsed" ? "" : "justify-start"}
+            className={state === "collapsed" ? "" : "w-full justify-start"}
             onClick={() => setSearchOpen(true)}
             title="Search chats"
           >
@@ -134,13 +134,15 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              className={state === "collapsed" ? "" : "justify-start"}
-              title="Settings"
-              onClick={() => setActiveView("settings")}
-            >
-              <Settings className="size-4" />
-              {state !== "collapsed" && <span className="ml-2">Settings</span>}
+            <SidebarMenuButton asChild>
+              <button
+                className={state === "collapsed" ? "" : "w-full justify-start"}
+                title="Settings"
+                onClick={() => setActiveView("settings")}
+              >
+                <Settings className="size-4" />
+                {state !== "collapsed" && <span className="ml-2">Settings</span>}
+              </button>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
