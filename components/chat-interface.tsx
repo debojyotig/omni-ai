@@ -418,7 +418,7 @@ export function ChatInterface() {
               )}
 
               {/* Thinking indicator - clickable to toggle activity panel */}
-              {isLoading && !streamingContent && (
+              {isLoading && (
                 <div className="max-w-3xl mx-auto px-4">
                   <div className="flex items-center gap-4 py-6">
                     <div className="h-8 w-8" /> {/* Spacer for avatar alignment */}
