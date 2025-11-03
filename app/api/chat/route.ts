@@ -164,9 +164,15 @@ export async function POST(req: NextRequest) {
               }
             }
 
-            // Send each chunk as SSE
-            const data = `data: ${JSON.stringify(chunk)}\n\n`;
-            controller.enqueue(encoder.encode(data));
+            // Send each chunk as SSE (check if controller is still open)
+            try {
+              const data = `data: ${JSON.stringify(chunk)}\n\n`;
+              controller.enqueue(encoder.encode(data));
+            } catch (enqueueError) {
+              // Controller is closed, client disconnected - stop processing
+              console.log('[CHAT] Client disconnected, stopping stream');
+              break;
+            }
 
             // Log tool usage (debug)
             if (chunk.type === 'assistant') {
@@ -177,10 +183,18 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          controller.close();
+          try {
+            controller.close();
+          } catch (closeError) {
+            // Already closed, that's fine
+          }
         } catch (error) {
           console.error('[CHAT] Stream error:', error);
-          controller.error(error);
+          try {
+            controller.error(error);
+          } catch (errorError) {
+            // Controller already closed, ignore
+          }
         }
       }
     });
