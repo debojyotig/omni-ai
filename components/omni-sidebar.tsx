@@ -132,20 +132,18 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
       )}
 
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <button
-                className={state === "collapsed" ? "" : "w-full justify-start"}
-                title="Settings"
-                onClick={() => setActiveView("settings")}
-              >
-                <Settings className="size-4" />
-                {state !== "collapsed" && <span className="ml-2">Settings</span>}
-              </button>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <div className="px-2 py-2">
+          <Button
+            variant="ghost"
+            size={state === "collapsed" ? "icon" : "default"}
+            className={state === "collapsed" ? "" : "w-full justify-start"}
+            onClick={() => setActiveView("settings")}
+            title="Settings"
+          >
+            <Settings className="size-4" />
+            {state !== "collapsed" && <span className="ml-2">Settings</span>}
+          </Button>
+        </div>
       </SidebarFooter>
 
       <SidebarRail />
