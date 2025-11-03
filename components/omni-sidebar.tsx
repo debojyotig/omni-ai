@@ -64,7 +64,6 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
             size={state === "collapsed" ? "icon" : "default"}
             className={state === "collapsed" ? "h-10 w-10" : "w-full justify-start"}
             onClick={() => {
-              console.log('[SIDEBAR] New conversation button clicked')
               setActiveView("chat")
               createConversation()
             }}
@@ -78,7 +77,6 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
             size={state === "collapsed" ? "icon" : "default"}
             className={state === "collapsed" ? "h-10 w-10" : "w-full justify-start"}
             onClick={() => {
-              console.log('[SIDEBAR] Search chats button clicked')
               setActiveView("chat")
               setSearchOpen(true)
             }}
@@ -145,10 +143,7 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
             variant="ghost"
             size={state === "collapsed" ? "icon" : "default"}
             className={state === "collapsed" ? "h-10 w-10" : "w-full justify-start"}
-            onClick={() => {
-              console.log('[SIDEBAR] Settings button clicked')
-              setActiveView("settings")
-            }}
+            onClick={() => setActiveView("settings")}
             title="Settings"
           >
             <Settings className="size-4" />

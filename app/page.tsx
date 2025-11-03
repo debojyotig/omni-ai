@@ -17,8 +17,6 @@ import { Separator } from '@/components/ui/separator'
 export default function Home() {
   const activeView = useViewStore((state) => state.activeView)
 
-  console.log('[PAGE] Home component rendered with activeView:', activeView)
-
   return (
     <SidebarProvider>
       <OmniSidebar />
