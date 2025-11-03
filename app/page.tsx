@@ -15,7 +15,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 
 export default function Home() {
-  const { activeView } = useViewStore()
+  const activeView = useViewStore((state) => state.activeView)
 
   return (
     <SidebarProvider>

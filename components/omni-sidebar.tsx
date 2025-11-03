@@ -24,7 +24,7 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
   const [searchOpen, setSearchOpen] = React.useState(false)
   const [chatsOpen, setChatsOpen] = React.useState(true)
   const { state } = useSidebar()
-  const { setActiveView } = useViewStore()
+  const setActiveView = useViewStore((state) => state.setActiveView)
   const {
     conversations,
     activeConversationId,

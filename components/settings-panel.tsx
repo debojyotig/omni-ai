@@ -43,7 +43,7 @@ export function SettingsPanel() {
   const [providerData, setProviderData] = useState<ProviderData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { setActiveView } = useViewStore()
+  const setActiveView = useViewStore((state) => state.setActiveView)
 
   // Fetch provider info on mount
   useEffect(() => {
