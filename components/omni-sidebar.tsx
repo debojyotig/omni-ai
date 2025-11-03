@@ -58,7 +58,7 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
         </SidebarMenu>
 
         {/* Action Buttons */}
-        <div className={`flex flex-col gap-2 px-2 py-2 ${state === "collapsed" ? "items-center" : ""}`}>
+        <div className={`flex flex-col gap-2 px-2 py-2 w-full ${state === "collapsed" ? "items-center" : ""}`}>
           <Button
             variant="ghost"
             size={state === "collapsed" ? "icon" : "default"}
@@ -132,15 +132,12 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
       )}
 
       <SidebarFooter>
-        <div className={`px-2 py-2 ${state === "collapsed" ? "flex justify-center" : ""}`}>
+        <div className={`px-2 py-2 w-full ${state === "collapsed" ? "flex justify-center" : ""}`}>
           <Button
             variant="ghost"
             size={state === "collapsed" ? "icon" : "default"}
             className={state === "collapsed" ? "h-10 w-10" : "w-full justify-start"}
-            onClick={() => {
-              console.log("Settings clicked, setting view to settings")
-              setActiveView("settings")
-            }}
+            onClick={() => setActiveView("settings")}
             title="Settings"
           >
             <Settings className="size-4" />

@@ -1,10 +1,12 @@
 'use client'
 
+import { useViewStore } from '@/lib/stores/view-store'
 import { OmniSidebar } from '@/components/omni-sidebar'
 import { ChatHeader } from '@/components/chat-header'
 import { ChatInterface } from '@/components/chat-interface'
 import { IterationProgress } from '@/components/iteration-progress'
 import { ActivityPanel } from '@/components/activity-panel'
+import { SettingsPanel } from '@/components/settings-panel'
 import {
   SidebarInset,
   SidebarProvider,
@@ -13,6 +15,8 @@ import {
 import { Separator } from '@/components/ui/separator'
 
 export default function Home() {
+  const { activeView } = useViewStore()
+
   return (
     <SidebarProvider>
       <OmniSidebar />
@@ -24,22 +28,32 @@ export default function Home() {
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
               <div className="flex-1">
-                <ChatHeader />
+                {activeView === 'chat' && <ChatHeader />}
+                {activeView === 'settings' && <h2 className="text-lg font-semibold">Settings</h2>}
               </div>
             </div>
           </header>
 
           {/* Main content area - isolated scroll container */}
           <div className="flex flex-1 flex-col overflow-hidden min-h-0">
-            <IterationProgress />
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <ChatInterface />
-            </div>
+            {activeView === 'chat' && (
+              <>
+                <IterationProgress />
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  <ChatInterface />
+                </div>
+              </>
+            )}
+            {activeView === 'settings' && (
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <SettingsPanel />
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Activity Panel - isolated scroll container */}
-        <ActivityPanel />
+        {/* Right Activity Panel - isolated scroll container (only show during chat) */}
+        {activeView === 'chat' && <ActivityPanel />}
       </SidebarInset>
     </SidebarProvider>
   )
