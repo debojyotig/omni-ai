@@ -53,12 +53,14 @@ export function SettingsPanel() {
       setError(null)
       const response = await fetch('/api/provider')
       if (!response.ok) {
-        throw new Error('Failed to fetch provider info')
+        const errorData = await response.text()
+        throw new Error(`API error: ${response.status} - ${errorData}`)
       }
       const data = await response.json()
       setProviderData(data)
     } catch (err: any) {
-      setError(err.message || 'Failed to load provider configuration')
+      const errorMessage = err.message || 'Failed to load provider configuration'
+      setError(errorMessage)
       console.error('[SETTINGS] Error fetching provider info:', err)
     } finally {
       setLoading(false)
