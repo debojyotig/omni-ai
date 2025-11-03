@@ -47,9 +47,22 @@ export function ChatInterface() {
   const activeConversation = getActiveConversation();
   const messages = isMounted ? (activeConversation?.messages ?? []) : [];
 
-  // Hydration setup (don't create conversation on mount)
+  // Hydration and initial conversation setup
   useEffect(() => {
     setIsMounted(true);
+    // Wait for store to rehydrate from localStorage before creating a conversation
+    const checkRehydration = () => {
+      const state = useConversationStore.getState() as any;
+      if (state._hasHydrated) {
+        if (state.conversations.length === 0) {
+          createConversation();
+        }
+      } else {
+        // Check again after a short delay
+        setTimeout(checkRehydration, 50);
+      }
+    };
+    checkRehydration();
   }, []);
 
   // Auto-scroll to bottom
@@ -76,13 +89,7 @@ export function ChatInterface() {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
-
-    // Create a conversation if one doesn't exist (first message)
-    let conversationId = activeConversationId;
-    if (!conversationId) {
-      conversationId = createConversation();
-    }
+    if (!input.trim() || isLoading || !activeConversationId) return;
 
     const userMessage = {
       id: crypto.randomUUID(),
@@ -91,7 +98,7 @@ export function ChatInterface() {
       timestamp: Date.now(),
     };
 
-    addMessage(conversationId, userMessage);
+    addMessage(activeConversationId, userMessage);
     const currentInput = input;
     setInput('');
     setIsLoading(true);
@@ -101,7 +108,7 @@ export function ChatInterface() {
 
     // Clear previous activity steps, set thread ID, and open activity panel
     clearSteps();
-    setThreadId(conversationId);
+    setThreadId(activeConversationId);
     toolStepsRef.current.clear();
     const { setOpen } = useActivityStore.getState();
     setOpen(true); // Auto-open activity panel for new messages
@@ -137,7 +144,7 @@ export function ChatInterface() {
         body: JSON.stringify({
           message: currentInput,
           agent: selectedAgent,
-          threadId: conversationId, // Use conversation ID as thread ID
+          threadId: activeConversationId, // Use conversation ID as thread ID
           resourceId: 'default-user', // User identifier (can be enhanced later)
         }),
         signal: controller.signal,
