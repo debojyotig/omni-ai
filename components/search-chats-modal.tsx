@@ -21,6 +21,16 @@ export function SearchChatsModal({ open, onOpenChange }: SearchChatsModalProps) 
   const [searchQuery, setSearchQuery] = useState('')
   const { conversations, activeConversationId, setActiveConversation, createConversation } = useConversationStore()
 
+  const formatTimestamp = (timestamp: number) => {
+    const now = Date.now()
+    const diff = now - timestamp
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    if (days === 0) return 'Today'
+    if (days === 1) return 'Yesterday'
+    if (days < 7) return `${days} days ago`
+    return new Date(timestamp).toLocaleDateString()
+  }
+
   // Group conversations by date
   const groupedResults = useMemo(() => {
     const filtered = conversations.filter(conv =>
@@ -38,16 +48,6 @@ export function SearchChatsModal({ open, onOpenChange }: SearchChatsModalProps) 
 
     return groups
   }, [conversations, searchQuery])
-
-  const formatTimestamp = (timestamp: number) => {
-    const now = Date.now()
-    const diff = now - timestamp
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-    if (days === 0) return 'Today'
-    if (days === 1) return 'Yesterday'
-    if (days < 7) return `${days} days ago`
-    return new Date(timestamp).toLocaleDateString()
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
