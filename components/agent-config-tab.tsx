@@ -20,11 +20,20 @@ import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
 import { CheckCircle2, RotateCcw, Info } from 'lucide-react'
+import { PROVIDERS } from '@/lib/config/provider-config'
+
+interface ProviderStatus {
+  id: string
+  name: string
+  configured: boolean
+}
 
 export function AgentConfigTab() {
   const { selectedProviderId, selectedModelId, getAllModels } =
@@ -37,6 +46,7 @@ export function AgentConfigTab() {
   const [selectedConfigModelId, setSelectedConfigModelId] = useState<
     string | null
   >(null)
+  const [availableProviders, setAvailableProviders] = useState<ProviderStatus[]>([])
 
   // Local state for sliders
   const [maxOutputTokens, setMaxOutputTokens] = useState(8192)
@@ -44,6 +54,22 @@ export function AgentConfigTab() {
   const [maxIterations, setMaxIterations] = useState(15)
 
   const [showSavedIndicator, setShowSavedIndicator] = useState(false)
+
+  // Fetch configured providers on mount
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        const response = await fetch('/api/provider')
+        if (response.ok) {
+          const data = await response.json()
+          setAvailableProviders(data.available || [])
+        }
+      } catch (error) {
+        console.error('[AGENT-CONFIG] Failed to fetch provider info:', error)
+      }
+    }
+    fetchProviders()
+  }, [])
 
   // Initialize with current provider/model
   useEffect(() => {
@@ -99,6 +125,25 @@ export function AgentConfigTab() {
   const allModels = getAllModels()
   const defaultConfigs = getAllDefaultConfigs()
 
+  // Get configured provider IDs
+  const configuredProviderIds = new Set(
+    availableProviders.filter(p => p.configured).map(p => p.id)
+  )
+
+  // Filter models to only show from configured providers
+  const filteredModels = allModels.filter(model =>
+    configuredProviderIds.has(model.provider)
+  )
+
+  // Group filtered models by provider for better UX
+  const modelsByProvider = filteredModels.reduce((acc, model) => {
+    if (!acc[model.provider]) {
+      acc[model.provider] = []
+    }
+    acc[model.provider].push(model)
+    return acc
+  }, {} as Record<string, typeof filteredModels>)
+
   // Get default config for selected provider
   const defaultConfig = selectedConfigProviderId
     ? defaultConfigs[selectedConfigProviderId] || {
@@ -140,17 +185,25 @@ export function AgentConfigTab() {
             <SelectValue placeholder="Select a provider/model" />
           </SelectTrigger>
           <SelectContent>
-            {allModels.map((model) => (
-              <SelectItem
-                key={`${model.provider}:${model.id}`}
-                value={`${model.provider}:${model.id}`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{model.provider}</span>
-                  <span className="text-muted-foreground">·</span>
-                  <span>{model.name}</span>
-                </div>
-              </SelectItem>
+            {Object.entries(modelsByProvider).map(([providerId, models]) => (
+              <SelectGroup key={providerId}>
+                <SelectLabel>{PROVIDERS[providerId]?.name || providerId}</SelectLabel>
+                {models.map((model) => (
+                  <SelectItem
+                    key={`${model.provider}:${model.id}`}
+                    value={`${model.provider}:${model.id}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>{model.name}</span>
+                      {model.maxTokens && (
+                        <span className="text-xs text-muted-foreground">
+                          {(model.maxTokens / 1000).toFixed(0)}k
+                        </span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             ))}
           </SelectContent>
         </Select>

@@ -3,10 +3,12 @@
  *
  * Displays agent selector and model selector for runtime switching.
  * Shows provider and model information without requiring page reload.
+ * Only displays models from configured providers.
  */
 
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useProviderStore } from '@/lib/stores/provider-store'
 import { useAgentStore, AGENTS } from '@/lib/stores/agent-store'
 import { PROVIDERS } from '@/lib/config/provider-config'
@@ -22,20 +24,53 @@ import {
 import { Sparkles, Bot } from 'lucide-react'
 import { ThemeSwitcher } from '@/components/theme-switcher'
 
+interface ProviderStatus {
+  id: string
+  name: string
+  configured: boolean
+}
+
 export function ChatHeader() {
   const { selectedProviderId, selectedModelId, setModel, getAllModels } = useProviderStore()
   const { selectedAgent, setAgent } = useAgentStore()
+  const [availableProviders, setAvailableProviders] = useState<ProviderStatus[]>([])
+
+  // Fetch configured providers on mount
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        const response = await fetch('/api/provider')
+        if (response.ok) {
+          const data = await response.json()
+          setAvailableProviders(data.available || [])
+        }
+      } catch (error) {
+        console.error('[CHAT-HEADER] Failed to fetch provider info:', error)
+      }
+    }
+    fetchProviders()
+  }, [])
 
   const allModels = getAllModels()
 
-  // Group models by provider for better UX
-  const modelsByProvider = allModels.reduce((acc, model) => {
+  // Get configured provider IDs
+  const configuredProviderIds = new Set(
+    availableProviders.filter(p => p.configured).map(p => p.id)
+  )
+
+  // Filter models to only show from configured providers
+  const filteredModels = allModels.filter(model =>
+    configuredProviderIds.has(model.provider)
+  )
+
+  // Group filtered models by provider for better UX
+  const modelsByProvider = filteredModels.reduce((acc, model) => {
     if (!acc[model.provider]) {
       acc[model.provider] = []
     }
     acc[model.provider].push(model)
     return acc
-  }, {} as Record<string, typeof allModels>)
+  }, {} as Record<string, typeof filteredModels>)
 
   const currentModel = allModels.find(m => m.id === selectedModelId)
   const currentAgent = AGENTS.find(a => a.id === selectedAgent)
