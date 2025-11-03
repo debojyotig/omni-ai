@@ -9,6 +9,7 @@ import {
   CommandItem,
   CommandList
 } from '@/components/ui/command'
+import { DialogTitle } from '@/components/ui/dialog'
 import { MessageSquare, Settings, Zap, Bot } from 'lucide-react'
 import { useViewStore } from '@/lib/stores/view-store'
 import { useAgentStore } from '@/lib/stores/agent-store'
@@ -38,6 +39,7 @@ export function CommandPalette() {
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
+      <DialogTitle className="sr-only">Command Palette</DialogTitle>
       <CommandInput placeholder="Type a command or search..." aria-label="Command search" />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
