@@ -5,6 +5,8 @@
  * Supports: time-series, comparisons, distributions, breakdowns, tables
  */
 
+import { isTableTimeSeries, convertTableToTimeSeries } from './data-extractor';
+
 export interface DataPattern {
   type: 'timeseries' | 'comparison' | 'distribution' | 'breakdown' | 'table';
   confidence: number; // 0-1
@@ -281,14 +283,21 @@ export function detectVisualizablePatterns(content: string): DataPattern[] {
   const tables = extractMarkdownTables(content);
 
   for (const table of tables) {
-    patterns.push({
-      type: 'table',
-      confidence: 0.95,
-      data: table,
-      metadata: {
-        title: 'Data Table',
-      },
-    });
+    // Check if this table is actually time-series data and convert if applicable
+    if (isTableTimeSeries(table.headers, table.rows)) {
+      const timeSeriesPattern = convertTableToTimeSeries(table.headers, table.rows);
+      patterns.push(timeSeriesPattern);
+    } else {
+      // Keep as regular table if not time-series
+      patterns.push({
+        type: 'table',
+        confidence: 0.95,
+        data: table,
+        metadata: {
+          title: 'Data Table',
+        },
+      });
+    }
   }
 
   // Return only high-confidence patterns

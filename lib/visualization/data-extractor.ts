@@ -202,7 +202,7 @@ function extractKeyValueData(content: string): DataPattern | null {
  * Checks if extracted table data is actually time-series data
  * More aggressive detection to convert tables to charts when possible
  */
-function isTableTimeSeries(headers: string[], rows: string[][]): boolean {
+export function isTableTimeSeries(headers: string[], rows: string[][]): boolean {
   if (rows.length < 2 || headers.length < 2) return false;
 
   // Look for date/time related headers
@@ -272,7 +272,7 @@ function isTableTimeSeries(headers: string[], rows: string[][]): boolean {
  * Converts a table to time-series format if it looks like time-series
  * Intelligently selects primary numeric column for visualization
  */
-function convertTableToTimeSeries(headers: string[], rows: string[][]): DataPattern {
+export function convertTableToTimeSeries(headers: string[], rows: string[][]): DataPattern {
   const dateHeaderIdx = headers.findIndex(
     (h) =>
       h.toLowerCase().includes('date') ||
