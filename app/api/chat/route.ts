@@ -10,6 +10,7 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 import { mcpServers } from '@/lib/mcp/claude-sdk-mcp-config';
 import { subAgentConfigs } from '@/lib/agents/subagent-configs';
 import { withHallucinationReduction } from '@/lib/agents/hallucination-reduction';
+import { getSystemPromptWithStandardization } from '@/lib/agents/standardized-response-format';
 import { getAnthropicConfig } from '@/lib/config/server-provider-config';
 import { getSessionStore } from '@/lib/session/simple-session-store';
 import type { AgentType } from '@/lib/stores/agent-store';
@@ -19,7 +20,8 @@ import type { AgentType } from '@/lib/stores/agent-store';
  *
  * The orchestrator analyzes user intent and automatically delegates to specialized sub-agents.
  */
-const MASTER_ORCHESTRATOR_INSTRUCTIONS = withHallucinationReduction(`You are the Master Orchestrator for omni-ai, an intelligent investigation platform.
+const MASTER_ORCHESTRATOR_INSTRUCTIONS = getSystemPromptWithStandardization(
+  withHallucinationReduction(`You are the Master Orchestrator for omni-ai, an intelligent investigation platform.
 
 **CRITICAL: You are a DELEGATOR ONLY. You do NOT have direct tool access. You MUST delegate ALL tool-using tasks to sub-agents. Never try to call MCP tools yourself - you will fail. Always delegate.**
 
@@ -42,7 +44,9 @@ You: "I'll delegate to the general-investigator to query TMDB."
 Example (WRONG - DO NOT DO THIS):
 User: "What are the top 5 popular movies on TMDB?"
 You: *tries to call mcp__omni-api__call_rest_api directly* ← WRONG! You can't do this!
-[You have no tool access - delegate instead]`);
+[You have no tool access - delegate instead]`),
+  'smart-agent'
+);
 
 /**
  * Map UI agent IDs to sub-agent configurations

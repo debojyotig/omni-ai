@@ -6,6 +6,7 @@
  */
 
 import { withHallucinationReduction } from './hallucination-reduction';
+import { getSystemPromptWithStandardization } from './standardized-response-format';
 
 /**
  * DataDog Champion Agent Instructions
@@ -221,7 +222,10 @@ Capabilities:
 - Correlates timeline with deployments
 - Performs 8-step root cause analysis`,
 
-    prompt: withHallucinationReduction(DATADOG_CHAMPION_INSTRUCTIONS),
+    prompt: getSystemPromptWithStandardization(
+      withHallucinationReduction(DATADOG_CHAMPION_INSTRUCTIONS),
+      'datadog-champion'
+    ),
 
     tools: [
       'mcp__omni-api__discover_datasets',
@@ -246,7 +250,10 @@ Capabilities:
 - Detects inconsistencies
 - Merges results intelligently`,
 
-    prompt: withHallucinationReduction(API_CORRELATOR_INSTRUCTIONS),
+    prompt: getSystemPromptWithStandardization(
+      withHallucinationReduction(API_CORRELATOR_INSTRUCTIONS),
+      'api-correlator'
+    ),
 
     tools: [
       'mcp__omni-api__call_rest_api',
@@ -270,7 +277,10 @@ Capabilities:
 - Simple queries
 - Documentation lookup`,
 
-    prompt: withHallucinationReduction(GENERAL_INVESTIGATOR_INSTRUCTIONS),
+    prompt: getSystemPromptWithStandardization(
+      withHallucinationReduction(GENERAL_INVESTIGATOR_INSTRUCTIONS),
+      'general-investigator'
+    ),
 
     tools: [
       'mcp__omni-api__discover_datasets',
