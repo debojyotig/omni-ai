@@ -7,7 +7,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "bundle": "node scripts/bundle-distribution.js",
+    "installer": "node scripts/create-installer.js",
+    "release": "npm run build && npm run bundle && npm run installer"
   },
   "keywords": [],
   "author": "",
@@ -73,7 +76,9 @@
     "@tailwindcss/postcss": "^4.1.16",
     "@types/node": "^24.9.2",
     "@types/react-syntax-highlighter": "^15.5.13",
+    "archiver": "^7.0.1",
     "autoprefixer": "^10.4.21",
+    "fs-extra": "^11.3.2",
     "mastra": "^0.17.7",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.16",
