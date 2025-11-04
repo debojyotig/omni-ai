@@ -341,9 +341,9 @@ export function convertTableToTimeSeries(headers: string[], rows: string[][]): D
     }
   }
 
-  // Add numeric columns to time-series
+  // Add numeric columns to time-series, replacing NaN with null for Recharts compatibility
   for (const col of numericColumns) {
-    timeSeriesData[col.header] = col.values;
+    timeSeriesData[col.header] = col.values.map(v => isNaN(v) ? null : v);
   }
 
   // If no numeric columns found, return table pattern instead
