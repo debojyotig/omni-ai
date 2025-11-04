@@ -1,7 +1,9 @@
 /**
  * Response Visualizer Component
  *
- * Automatically detects and visualizes data patterns in agent responses
+ * Two-stage visualization strategy:
+ * 1. First: Check for agent-provided visualization hints in response
+ * 2. Second: Fall back to pattern detection + optional LLM extraction
  */
 
 'use client';
@@ -10,6 +12,7 @@ import React from 'react';
 import { detectVisualizablePatterns } from '@/lib/visualization/chart-detector';
 import { transformPatternToChartData } from '@/lib/visualization/chart-transformer';
 import { useExtractionSettingsStore } from '@/lib/stores/extraction-settings-store';
+import { extractVisualizationHint } from '@/lib/agents/visualization-hints';
 import { AreaChartComponent } from './charts/area-chart';
 import { BarChartComponent } from './charts/bar-chart';
 import { PieChartComponent } from './charts/pie-chart';
@@ -26,10 +29,32 @@ export function ResponseVisualizer({ content }: ResponseVisualizerProps) {
   React.useEffect(() => {
     (async () => {
       try {
-        // Stage 1: Try standard pattern detection (JSON + markdown tables)
+        // Stage 1: Check for agent-provided visualization hints
+        const hint = extractVisualizationHint(content);
+        if (hint) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[ResponseVisualizer] Using agent-provided visualization hint:', hint.dataType, hint.visualizationType);
+          }
+
+          // Convert hint to chart visualization
+          setVisualizations([
+            {
+              hint,
+              data: hint.structuredData,
+              metadata: {
+                title: hint.title,
+                description: hint.description,
+                dataMapping: hint.dataMapping,
+              }
+            }
+          ]);
+          return;
+        }
+
+        // Stage 2: Try standard pattern detection (JSON + markdown tables)
         let patterns = detectVisualizablePatterns(content);
 
-        // Stage 2: If no patterns found, try hybrid extraction via API (pattern + optional LLM fallback)
+        // Stage 3: If no patterns found, try hybrid extraction via API (pattern + optional LLM fallback)
         if (patterns.length === 0) {
           try {
             const response = await fetch('/api/extract', {
@@ -80,46 +105,57 @@ export function ResponseVisualizer({ content }: ResponseVisualizerProps) {
   return (
     <div className="space-y-6 my-4">
       {visualizations.map((viz, idx) => {
-        const { pattern, data } = viz;
+        // Determine visualization type: hint-based or pattern-based
+        const isHint = !!viz.hint;
+        const chartType = isHint ? viz.hint.visualizationType : viz.pattern?.type;
+        const chartData = viz.data;
+        const chartTitle = isHint ? viz.metadata?.title : viz.pattern?.metadata?.title;
 
         try {
-          switch (pattern.type) {
+          switch (chartType) {
             case 'timeseries':
+            case 'area':
               return (
                 <AreaChartComponent
                   key={idx}
-                  data={data}
-                  title={pattern.metadata?.title}
+                  data={chartData}
+                  title={chartTitle}
                 />
               );
             case 'comparison':
+            case 'ranking':
+            case 'bar':
               return (
                 <BarChartComponent
                   key={idx}
-                  data={data}
-                  title={pattern.metadata?.title}
+                  data={chartData}
+                  title={chartTitle}
                 />
               );
             case 'distribution':
+            case 'pie':
               return (
                 <PieChartComponent
                   key={idx}
-                  data={data}
-                  title={pattern.metadata?.title}
+                  data={chartData}
+                  title={chartTitle}
                 />
               );
             case 'table':
               return (
                 <TableViewer
                   key={idx}
-                  data={data}
-                  title={pattern.metadata?.title}
+                  data={chartData}
+                  title={chartTitle}
                 />
               );
             default:
               return null;
           }
         } catch (error) {
+          if (process.env.NODE_ENV === 'development') {
+            console.error('[ResponseVisualizer] Chart rendering failed:', error);
+          }
           return null;
         }
       })}

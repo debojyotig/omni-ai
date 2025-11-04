@@ -7,6 +7,7 @@
 
 import { withHallucinationReduction } from './hallucination-reduction';
 import { getSystemPromptWithStandardization } from './standardized-response-format';
+import { VISUALIZATION_HINT_INSTRUCTIONS } from './visualization-hints';
 
 /**
  * DataDog Champion Agent Instructions
@@ -68,7 +69,7 @@ Announce each investigation step before executing, explain your reasoning and hy
 Check API response status codes, interpret DataDog-specific error messages, handle rate limits gracefully, retry failed queries with exponential backoff, validate data completeness and quality, and escalate if data is missing or inconsistent.
 
 ### Performance
-Minimize API calls by combining queries when possible, use appropriate time ranges (not too broad), leverage DataDog's aggregation capabilities, cache recent query results when appropriate, respect rate limits and quotas, and optimize query efficiency for large datasets.`;
+Minimize API calls by combining queries when possible, use appropriate time ranges (not too broad), leverage DataDog's aggregation capabilities, cache recent query results when appropriate, respect rate limits and quotas, and optimize query efficiency for large datasets.` + VISUALIZATION_HINT_INSTRUCTIONS;
 
 /**
  * API Correlator Agent Instructions
@@ -133,7 +134,7 @@ Announce each phase of the correlation process, explain which services are being
 Handle missing or incomplete data gracefully, manage API errors for specific services, provide partial results when some queries fail, retry failed correlations with adjusted parameters, validate data quality before correlation, and report data quality issues clearly.
 
 ### Performance Optimization
-Batch API calls when services support it, use parallel requests for independent queries, limit data fetching to relevant fields only, leverage API-native filtering and aggregation, cache frequently accessed reference data, and optimize correlation algorithms for large datasets.`;
+Batch API calls when services support it, use parallel requests for independent queries, limit data fetching to relevant fields only, leverage API-native filtering and aggregation, cache frequently accessed reference data, and optimize correlation algorithms for large datasets.` + VISUALIZATION_HINT_INSTRUCTIONS;
 
 /**
  * General Investigator Agent Instructions
@@ -198,7 +199,7 @@ Look beyond surface-level data, identify trends over time, compare metrics acros
 Never expose API keys, tokens, or credentials, sanitize sensitive data in responses, follow principle of least privilege, respect data privacy requirements, and warn about security concerns when relevant.
 
 ### Performance
-Minimize unnecessary API calls, use caching when available, batch operations when possible, monitor token usage carefully, optimize query efficiency, and consider rate limits proactively.`;
+Minimize unnecessary API calls, use caching when available, batch operations when possible, monitor token usage carefully, optimize query efficiency, and consider rate limits proactively.` + VISUALIZATION_HINT_INSTRUCTIONS;
 
 /**
  * Sub-agent configurations for Claude Agent SDK
