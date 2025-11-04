@@ -2,6 +2,7 @@
  * Chart Transformer
  *
  * Transforms detected data patterns into recharts-compatible formats
+ * Supports optional dataMapping hints from visualization metadata
  */
 
 import { DataPattern } from './chart-detector';
@@ -32,7 +33,19 @@ export interface TableData {
 }
 
 /**
- * Default color palette for charts
+ * Data mapping hints from visualization metadata
+ * Specifies which fields should map to which chart dimensions
+ */
+export interface DataMapping {
+  xAxis?: string;
+  yAxis?: string[];
+  category?: string;
+  value?: string;
+}
+
+/**
+ * Default color palette for charts (unified across all chart types)
+ * Must match the palette used in chart components for consistency
  */
 const COLORS = [
   '#3b82f6', // blue
@@ -41,38 +54,49 @@ const COLORS = [
   '#f59e0b', // amber
   '#8b5cf6', // purple
   '#ec4899', // pink
-  '#06b6d4', // cyan
   '#14b8a6', // teal
+  '#f97316', // orange
 ];
 
 /**
  * Transform time-series data for Area/Line chart
+ * @param pattern Data pattern with structured data
+ * @param dataMapping Optional hints specifying xAxis and yAxis field mappings
  */
-export function transformTimeSeriesData(pattern: DataPattern): TimeSeriesData {
+export function transformTimeSeriesData(pattern: DataPattern, dataMapping?: DataMapping): TimeSeriesData {
   const { data } = pattern;
   const keys = Object.keys(data);
 
-  // Find time/date key
+  // Determine time key: prefer dataMapping hint, then heuristic detection
   let timeKey = '';
   let valueKeys: string[] = [];
 
-  for (const key of keys) {
-    if (
-      key.toLowerCase().includes('time') ||
-      key.toLowerCase().includes('date') ||
-      key.toLowerCase().includes('hour') ||
-      key.toLowerCase().includes('day')
-    ) {
-      timeKey = key;
-    } else if (typeof data[key] === 'number' || Array.isArray(data[key])) {
-      valueKeys.push(key);
+  if (dataMapping?.xAxis && keys.includes(dataMapping.xAxis)) {
+    // Use explicit xAxis from dataMapping
+    timeKey = dataMapping.xAxis;
+    valueKeys = dataMapping.yAxis && Array.isArray(dataMapping.yAxis)
+      ? dataMapping.yAxis.filter((k) => keys.includes(k))
+      : keys.filter((k) => k !== timeKey);
+  } else {
+    // Fallback to heuristic detection
+    for (const key of keys) {
+      if (
+        key.toLowerCase().includes('time') ||
+        key.toLowerCase().includes('date') ||
+        key.toLowerCase().includes('hour') ||
+        key.toLowerCase().includes('day')
+      ) {
+        timeKey = key;
+      } else if (typeof data[key] === 'number' || Array.isArray(data[key])) {
+        valueKeys.push(key);
+      }
     }
-  }
 
-  // If no explicit time key, use first key
-  if (!timeKey && keys.length > 0) {
-    timeKey = keys[0];
-    valueKeys = keys.slice(1);
+    // If no explicit time key, use first key
+    if (!timeKey && keys.length > 0) {
+      timeKey = keys[0];
+      valueKeys = keys.slice(1);
+    }
   }
 
   // Build data points
@@ -117,25 +141,39 @@ export function transformTimeSeriesData(pattern: DataPattern): TimeSeriesData {
 
 /**
  * Transform comparison data for Bar chart
+ * @param pattern Data pattern with structured data
+ * @param dataMapping Optional hints specifying category and value field mappings
  */
-export function transformComparisonData(pattern: DataPattern): ComparisonData {
+export function transformComparisonData(pattern: DataPattern, dataMapping?: DataMapping): ComparisonData {
   const { data } = pattern;
   const keys = Object.keys(data);
 
-  // Separate category and value keys
-  // Prefer the key with string values (for category labels)
-  let categoryKey = keys.find((k) => {
-    if (typeof data[k] === 'string') return true;
-    if (Array.isArray(data[k]) && data[k].length > 0 && typeof data[k][0] === 'string') {
-      return true;
-    }
-    return false;
-  }) || keys[0];
+  // Determine category key: prefer dataMapping hint, then heuristic detection
+  let categoryKey = '';
+  let valueKeys: string[] = [];
 
-  // Find value keys: numeric values or numeric arrays, excluding the category key
-  const valueKeys = keys.filter(
-    (k) => k !== categoryKey && (typeof data[k] === 'number' || Array.isArray(data[k]))
-  );
+  if (dataMapping?.category && keys.includes(dataMapping.category)) {
+    // Use explicit category from dataMapping
+    categoryKey = dataMapping.category;
+    valueKeys = dataMapping.yAxis && Array.isArray(dataMapping.yAxis)
+      ? dataMapping.yAxis.filter((k) => keys.includes(k) && k !== categoryKey)
+      : keys.filter((k) => k !== categoryKey && (typeof data[k] === 'number' || Array.isArray(data[k])));
+  } else {
+    // Fallback to heuristic detection
+    // Prefer the key with string values (for category labels)
+    categoryKey = keys.find((k) => {
+      if (typeof data[k] === 'string') return true;
+      if (Array.isArray(data[k]) && data[k].length > 0 && typeof data[k][0] === 'string') {
+        return true;
+      }
+      return false;
+    }) || keys[0];
+
+    // Find value keys: numeric values or numeric arrays, excluding the category key
+    valueKeys = keys.filter(
+      (k) => k !== categoryKey && (typeof data[k] === 'number' || Array.isArray(data[k]))
+    );
+  }
 
   const chartData: ChartDataPoint[] = [];
 
@@ -182,18 +220,28 @@ export function transformComparisonData(pattern: DataPattern): ComparisonData {
 
 /**
  * Transform distribution data for Pie chart
+ * @param pattern Data pattern with structured data
+ * @param dataMapping Optional hints specifying category and value field mappings
  */
-export function transformDistributionData(pattern: DataPattern): DistributionData {
+export function transformDistributionData(pattern: DataPattern, dataMapping?: DataMapping): DistributionData {
   const { data } = pattern;
   const keys = Object.keys(data);
 
-  const categoryKey = keys.find(
-    (k) => typeof data[k] === 'string'
-  ) || keys[0];
+  // Determine category and value keys: prefer dataMapping hints
+  let categoryKey = '';
+  let valueKey = '';
 
-  const valueKey = keys.find(
-    (k) => typeof data[k] === 'number'
-  ) || keys.find((k) => k !== categoryKey) || keys[1];
+  if (dataMapping?.category && keys.includes(dataMapping.category)) {
+    categoryKey = dataMapping.category;
+  } else {
+    categoryKey = keys.find((k) => typeof data[k] === 'string') || keys[0];
+  }
+
+  if (dataMapping?.value && keys.includes(dataMapping.value)) {
+    valueKey = dataMapping.value;
+  } else {
+    valueKey = keys.find((k) => typeof data[k] === 'number') || keys.find((k) => k !== categoryKey) || keys[1];
+  }
 
   const chartData: ChartDataPoint[] = [];
 
@@ -237,17 +285,20 @@ export function transformTableData(pattern: DataPattern): TableData {
 
 /**
  * Main transformer function
+ * @param pattern Data pattern with structured data
+ * @param dataMapping Optional hints specifying field mappings (from visualization metadata)
  */
 export function transformPatternToChartData(
-  pattern: DataPattern
+  pattern: DataPattern,
+  dataMapping?: DataMapping
 ): TimeSeriesData | ComparisonData | DistributionData | TableData {
   switch (pattern.type) {
     case 'timeseries':
-      return transformTimeSeriesData(pattern);
+      return transformTimeSeriesData(pattern, dataMapping);
     case 'comparison':
-      return transformComparisonData(pattern);
+      return transformComparisonData(pattern, dataMapping);
     case 'distribution':
-      return transformDistributionData(pattern);
+      return transformDistributionData(pattern, dataMapping);
     case 'table':
       return transformTableData(pattern);
     default:

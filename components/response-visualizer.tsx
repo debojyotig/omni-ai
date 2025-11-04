@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { detectVisualizablePatterns } from '@/lib/visualization/chart-detector';
-import { transformPatternToChartData } from '@/lib/visualization/chart-transformer';
+import { transformPatternToChartData, DataMapping } from '@/lib/visualization/chart-transformer';
 import { useExtractionSettingsStore } from '@/lib/stores/extraction-settings-store';
 import { extractVisualizationHint } from '@/lib/agents/visualization-hints';
 import { AreaChartComponent } from './charts/area-chart';
@@ -89,6 +89,7 @@ export function ResponseVisualizer({ content }: ResponseVisualizerProps) {
         const chartData = patterns.map((pattern) => ({
           pattern,
           data: transformPatternToChartData(pattern),
+          dataMapping: undefined, // Pattern-based visualizations don't have explicit dataMapping
         }));
 
         setVisualizations(chartData);
@@ -108,7 +109,16 @@ export function ResponseVisualizer({ content }: ResponseVisualizerProps) {
         // Determine visualization type: hint-based or pattern-based
         const isHint = !!viz.hint;
         const chartType = isHint ? viz.hint.visualizationType : viz.pattern?.type;
-        const chartData = viz.data;
+        const dataMapping = isHint ? viz.metadata?.dataMapping : undefined;
+
+        // For hint-based visualizations, use the provided data directly
+        // For pattern-based, apply dataMapping during transformation if available
+        let chartData = viz.data;
+        if (!isHint && viz.pattern && dataMapping) {
+          // Re-transform pattern data with explicit dataMapping hints
+          chartData = transformPatternToChartData(viz.pattern, dataMapping);
+        }
+
         const chartTitle = isHint ? viz.metadata?.title : viz.pattern?.metadata?.title;
 
         try {
