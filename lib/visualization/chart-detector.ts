@@ -67,45 +67,94 @@ function extractJsonBlocks(content: string): any[] {
 
 /**
  * Extracts markdown tables from content
+ * Strict validation to avoid catching broken/partial data
  */
 function extractMarkdownTables(
   content: string
 ): { headers: string[]; rows: string[][] }[] {
   const tables: { headers: string[]; rows: string[][] }[] = [];
-  const tableRegex = /\|[\s\S]*?\|/g;
-  const matches = content.match(tableRegex);
+  const lines = content.split('\n');
 
-  if (!matches) return tables;
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i].trim();
 
-  let currentTableLines: string[] = [];
-  for (const match of matches) {
-    const lines = match.trim().split('\n');
-    for (const line of lines) {
-      if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
-        currentTableLines.push(line);
-      }
+    // Look for lines that start and end with pipes
+    if (!line.startsWith('|') || !line.endsWith('|')) {
+      i++;
+      continue;
     }
-  }
 
-  if (currentTableLines.length >= 2) {
-    const headerLine = currentTableLines[0]
+    // Next line should be separator
+    if (i + 1 >= lines.length) {
+      i++;
+      continue;
+    }
+
+    const separatorLine = lines[i + 1].trim();
+    if (!separatorLine.startsWith('|') || !separatorLine.includes('-')) {
+      i++;
+      continue;
+    }
+
+    // Parse header
+    const headerCells = line
       .split('|')
-      .map((h) => h.trim())
-      .filter((h) => h && h !== '-');
+      .map((cell) => cell.trim())
+      .filter((cell) => cell && cell !== '');
 
-    const separatorLine = currentTableLines[1];
-    if (separatorLine.includes('-')) {
-      const rows = currentTableLines.slice(2).map((line) =>
-        line
-          .split('|')
-          .map((cell) => cell.trim())
-          .filter((cell) => cell)
-      );
+    if (headerCells.length < 2) {
+      i++;
+      continue;
+    }
 
+    // Parse separator to validate column count
+    const separatorCells = separatorLine
+      .split('|')
+      .map((cell) => cell.trim())
+      .filter((cell) => cell !== '');
+
+    // Separator should have same number of columns as header
+    if (separatorCells.length !== headerCells.length) {
+      i++;
+      continue;
+    }
+
+    // Collect data rows
+    const rows: string[][] = [];
+    let j = i + 2;
+
+    while (j < lines.length) {
+      const dataLine = lines[j].trim();
+
+      // Stop if line doesn't look like table row
+      if (!dataLine.startsWith('|') || !dataLine.endsWith('|')) {
+        break;
+      }
+
+      const cells = dataLine
+        .split('|')
+        .map((cell) => cell.trim())
+        .filter((cell) => cell !== '');
+
+      // Row should have consistent column count
+      if (cells.length !== headerCells.length) {
+        break;
+      }
+
+      rows.push(cells);
+      j++;
+    }
+
+    // Only accept tables with at least 1 data row
+    if (rows.length > 0) {
       tables.push({
-        headers: headerLine,
+        headers: headerCells,
         rows,
       });
+      i = j;
+    } else {
+      i++;
     }
   }
 

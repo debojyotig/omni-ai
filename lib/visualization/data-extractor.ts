@@ -17,127 +17,63 @@ function isTableSeparator(line: string): boolean {
 }
 
 /**
- * Detects column boundaries by finding gaps of 2+ spaces in a line
- */
-function detectColumnBoundaries(line: string): number[] {
-  const boundaries: number[] = [0];
-  let inGap = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const isSpace = line[i] === ' ';
-
-    if (isSpace && !inGap && i > 0 && line[i - 1] !== ' ') {
-      // Starting a gap
-      inGap = true;
-    } else if (!isSpace && inGap) {
-      // Gap ended, new column starts
-      boundaries.push(i);
-      inGap = false;
-    }
-  }
-
-  return boundaries;
-}
-
-/**
- * Extracts cell content between column boundaries
- */
-function extractCellsByBoundaries(line: string, boundaries: number[]): string[] {
-  const cells: string[] = [];
-
-  for (let i = 0; i < boundaries.length; i++) {
-    const start = boundaries[i];
-    const end = i < boundaries.length - 1 ? boundaries[i + 1] : line.length;
-    const cell = line.substring(start, end).trim();
-    if (cell || i < boundaries.length - 1) {
-      // Include empty cells in the middle, but trim end
-      cells.push(cell);
-    }
-  }
-
-  return cells.filter((c) => c.length > 0 || cells.length < 5); // Remove trailing empty cells
-}
-
-/**
  * Extracts whitespace-aligned table from plain text
+ * Simplified approach: split by 2+ whitespace
  * Example:
  * Date       Price   Change
  * Oct 28     100.5   +2%
  * Oct 29     102.1   +1.6%
  */
 function extractPlainTextTable(content: string): DataPattern | null {
-  const lines = content.split('\n').filter((line) => line.trim());
+  const lines = content.split('\n').map((l) => l.trim()).filter((l) => l);
 
   if (lines.length < 3) return null;
 
-  // Find the header (usually first non-empty line)
+  // Extract headers from first line
   const headerLine = lines[0];
+  const headerParts = headerLine
+    .split(/\s{2,}/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 
-  // Detect column boundaries from header line
-  const boundaries = detectColumnBoundaries(headerLine);
+  // Need at least 2 columns
+  if (headerParts.length < 2) return null;
 
-  if (boundaries.length < 2) {
-    // Fallback to simple split if boundary detection fails
-    const headerParts = headerLine
+  // Extract data rows
+  const rows: string[][] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Skip separator lines (dashes, pipes)
+    if (isTableSeparator(line)) continue;
+
+    // Split by 2+ spaces (standard table alignment)
+    const cells = line
       .split(/\s{2,}/)
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
 
-    if (headerParts.length < 2) return null;
-
-    // Use simpler extraction
-    const rows: string[][] = [];
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i];
-      if (!line.trim() || isTableSeparator(line)) continue;
-
-      const cells = line
-        .split(/\s{2,}/)
-        .map((s) => s.trim())
-        .filter((s) => s);
-
-      if (cells.length >= headerParts.length - 1) {
-        while (cells.length < headerParts.length) cells.push('');
-        while (cells.length > headerParts.length) cells.pop();
-        rows.push(cells);
-      }
+    // Validate row structure
+    // Allow ±1 flexibility for ragged columns
+    const expectedCells = headerParts.length;
+    if (cells.length < expectedCells - 1 || cells.length > expectedCells + 2) {
+      // Row doesn't match header structure, skip it
+      continue;
     }
 
-    if (rows.length < 2) return null;
-
-    return {
-      type: 'table',
-      confidence: 0.8,
-      data: { headers: headerParts, rows },
-      metadata: {
-        title: 'Data Table',
-        description: 'Extracted from plain text',
-      },
-    };
-  }
-
-  // Extract header cells using boundaries
-  const headerParts = extractCellsByBoundaries(headerLine, boundaries);
-
-  if (headerParts.length < 2) return null;
-
-  // Extract data rows using same boundaries
-  const rows: string[][] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-
-    if (!line.trim() || isTableSeparator(line)) continue;
-
-    const cells = extractCellsByBoundaries(line, boundaries);
-
-    // Be flexible with cell count
-    if (cells.length >= Math.max(1, headerParts.length - 1)) {
-      while (cells.length < headerParts.length) cells.push('');
-      while (cells.length > headerParts.length) cells.pop();
-      rows.push(cells);
+    // Pad or trim to match header count
+    while (cells.length < expectedCells) {
+      cells.push('');
     }
+    while (cells.length > expectedCells) {
+      cells.pop();
+    }
+
+    rows.push(cells);
   }
 
+  // Need at least 2 data rows to be a valid table
   if (rows.length < 2) return null;
 
   return {
@@ -358,31 +294,57 @@ function convertTableToTimeSeries(headers: string[], rows: string[][]): DataPatt
 }
 
 /**
- * Main extraction function - tries multiple strategies
+ * Main extraction function - prioritizes Recharts visualizations
+ * Tries multiple strategies in order of preference:
+ * 1. Key-value pairs (for comparison/distribution charts)
+ * 2. Time-series extraction from text
+ * 3. Plain text tables (converted to time-series if applicable)
  */
 export function extractStructuredData(content: string): DataPattern | null {
-  // Strategy 1: Try plain text table (whitespace-aligned)
-  const tableData = extractPlainTextTable(content);
-  if (tableData) {
-    // Check if this table is actually time-series data
-    if (
-      tableData.data.headers &&
-      tableData.data.rows &&
-      isTableTimeSeries(tableData.data.headers, tableData.data.rows)
-    ) {
-      return convertTableToTimeSeries(tableData.data.headers, tableData.data.rows);
+  // Strategy 1: Try key-value extraction (often reveals comparison data)
+  const kvData = extractKeyValueData(content);
+  if (kvData) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[DataExtractor] Extracted key-value data:', kvData.type);
     }
-    return tableData;
+    return kvData;
   }
 
   // Strategy 2: Try time-series extraction
   const timeSeriesData = extractTimeSeriesFromText(content);
-  if (timeSeriesData) return timeSeriesData;
+  if (timeSeriesData) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[DataExtractor] Extracted time-series from text');
+    }
+    return timeSeriesData;
+  }
 
-  // Strategy 3: Try key-value extraction
-  const kvData = extractKeyValueData(content);
-  if (kvData) return kvData;
+  // Strategy 3: Try plain text table (and convert to chart if possible)
+  const tableData = extractPlainTextTable(content);
+  if (tableData && tableData.data.headers && tableData.data.rows) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[DataExtractor] Extracted table with headers:', tableData.data.headers);
+    }
 
+    // Aggressively try to convert to time-series chart
+    if (isTableTimeSeries(tableData.data.headers, tableData.data.rows)) {
+      const timeSeries = convertTableToTimeSeries(tableData.data.headers, tableData.data.rows);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[DataExtractor] Converted table to time-series chart');
+      }
+      return timeSeries;
+    }
+
+    // Return as table (fallback for non-visualizable data)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[DataExtractor] Keeping as plain table');
+    }
+    return tableData;
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[DataExtractor] No structured data found');
+  }
   return null;
 }
 
