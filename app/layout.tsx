@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   description: 'AI-powered investigation assistant for enterprise APIs'
 }
 
+export const dynamic = 'force-dynamic'
+
 export default function RootLayout({
   children
 }: Readonly<{

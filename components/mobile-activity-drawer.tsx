@@ -80,10 +80,8 @@ export function MobileActivityDrawer({ open, onOpenChange }: MobileActivityDrawe
                     <div className="pt-1 shrink-0">
                       {isRunning ? (
                         <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                      ) : step.status === 'completed' ? (
+                      ) : step.status === 'done' ? (
                         <CheckCircle className="w-4 h-4 text-green-500" />
-                      ) : step.status === 'failed' ? (
-                        <div className="w-4 h-4 rounded-full bg-red-500" />
                       ) : (
                         <div className="w-4 h-4 rounded-full bg-muted" />
                       )}
@@ -95,25 +93,21 @@ export function MobileActivityDrawer({ open, onOpenChange }: MobileActivityDrawe
                         {step.title}
                       </h4>
 
-                      {/* Sub-steps */}
-                      {step.subSteps && step.subSteps.length > 0 && (
-                        <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                          {step.subSteps.map((sub, subIdx) => (
-                            <li key={subIdx} className="truncate">
-                              {sub}
-                            </li>
-                          ))}
-                        </ul>
+                      {/* Step description */}
+                      {step.description && (
+                        <p className="text-xs text-muted-foreground">
+                          {step.description}
+                        </p>
                       )}
 
                       {/* Step status and duration */}
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">
-                          {isRunning ? 'Running' : step.status === 'completed' ? 'Completed' : 'Pending'}
+                          {isRunning ? 'Running' : step.status === 'done' ? 'Done' : step.status === 'error' ? 'Error' : 'Pending'}
                         </span>
-                        {(step.duration || isRunning) && (
+                        {(step.duration || isRunning) && runningDuration !== null && (
                           <span className="text-xs text-muted-foreground">
-                            {formatDuration(isRunning ? runningDuration : step.duration)}
+                            {formatDuration(isRunning ? runningDuration || 0 : step.duration)}
                           </span>
                         )}
                       </div>
