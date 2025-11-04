@@ -26,11 +26,18 @@ export interface ExtractionResult {
 
 /**
  * Hybrid extraction: patterns first, LLM fallback optional
+ * @param content Content to extract from
+ * @param enableLLMFallback Optional override for LLM extraction (takes precedence over env var)
  */
 export async function extractStructuredDataHybrid(
-  content: string
+  content: string,
+  enableLLMFallback?: boolean
 ): Promise<ExtractionResult> {
   const startTime = Date.now();
+
+  // Determine if LLM fallback should be enabled
+  // Client-side setting (enableLLMFallback) takes precedence over server env var
+  const shouldEnableLLM = enableLLMFallback !== undefined ? enableLLMFallback : isLLMExtractionEnabled();
 
   // Strategy 1: Try pattern-based (fast path)
   console.log('[Hybrid Extractor] Attempting pattern-based extraction...');
@@ -50,7 +57,7 @@ export async function extractStructuredDataHybrid(
   }
 
   // Strategy 2: Check if we should try LLM fallback
-  if (!isLLMExtractionEnabled()) {
+  if (!shouldEnableLLM) {
     if (patternResult) {
       // Pattern found but low confidence, LLM disabled
       console.log(

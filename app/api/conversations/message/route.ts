@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 async function addMessageWithRetry(
   conversationId: string,
   messageId: string,
-  role: string,
+  role: 'user' | 'assistant',
   content: string,
   timestamp: number,
   resourceId: string,
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    await addMessageWithRetry(conversationId, messageId, role, content, timestamp, resourceId || 'default-user')
+    await addMessageWithRetry(conversationId, messageId, role as 'user' | 'assistant', content, timestamp, resourceId || 'default-user')
 
     return NextResponse.json({ success: true })
   } catch (error) {

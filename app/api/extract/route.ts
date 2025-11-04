@@ -10,11 +10,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { extractStructuredDataHybrid, type ExtractionResult } from '@/lib/visualization/hybrid-extractor.server';
+import { extractStructuredDataHybrid } from '@/lib/visualization/hybrid-extractor.server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { content } = await request.json();
+    const { content, enableLLMFallback } = await request.json();
 
     if (!content || typeof content !== 'string') {
       return NextResponse.json(
@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Perform hybrid extraction (pattern + optional LLM fallback)
-    const result = await extractStructuredDataHybrid(content);
+    // enableLLMFallback from client takes precedence over server env var
+    const result = await extractStructuredDataHybrid(content, enableLLMFallback);
 
     // Return extraction result
     return NextResponse.json({

@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { CheckCircle2, XCircle, Info, AlertTriangle } from 'lucide-react'
 import { AgentConfigTab } from '@/components/agent-config-tab'
+import { ExtractionSettingsTab } from '@/components/extraction-settings-tab'
 
 interface ProviderInfo {
   id: string
@@ -121,9 +122,10 @@ export function SettingsPanel() {
 
         {/* Tabs */}
         <Tabs defaultValue="provider" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="provider">Provider & Model</TabsTrigger>
             <TabsTrigger value="agent-config">Agent Config</TabsTrigger>
+            <TabsTrigger value="extraction">Data Extraction</TabsTrigger>
           </TabsList>
 
           {/* Provider & Model Tab */}
@@ -278,6 +280,11 @@ export function SettingsPanel() {
           {/* Agent Config Tab */}
           <TabsContent value="agent-config" className="mt-6">
             <AgentConfigTab />
+          </TabsContent>
+
+          {/* Data Extraction Tab */}
+          <TabsContent value="extraction" className="mt-6">
+            <ExtractionSettingsTab />
           </TabsContent>
         </Tabs>
       </div>

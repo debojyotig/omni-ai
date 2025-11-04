@@ -9,6 +9,7 @@
 import React from 'react';
 import { detectVisualizablePatterns } from '@/lib/visualization/chart-detector';
 import { transformPatternToChartData } from '@/lib/visualization/chart-transformer';
+import { useExtractionSettingsStore } from '@/lib/stores/extraction-settings-store';
 import { AreaChartComponent } from './charts/area-chart';
 import { BarChartComponent } from './charts/bar-chart';
 import { PieChartComponent } from './charts/pie-chart';
@@ -20,6 +21,7 @@ interface ResponseVisualizerProps {
 
 export function ResponseVisualizer({ content }: ResponseVisualizerProps) {
   const [visualizations, setVisualizations] = React.useState<any[]>([]);
+  const { enableLLMExtraction } = useExtractionSettingsStore();
 
   React.useEffect(() => {
     (async () => {
@@ -33,7 +35,7 @@ export function ResponseVisualizer({ content }: ResponseVisualizerProps) {
             const response = await fetch('/api/extract', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ content }),
+              body: JSON.stringify({ content, enableLLMFallback: enableLLMExtraction }),
             });
 
             if (response.ok) {
