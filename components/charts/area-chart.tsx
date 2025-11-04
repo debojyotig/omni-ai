@@ -45,18 +45,19 @@ export function AreaChartComponent({ data, title }: AreaChartProps) {
   });
 
   return (
-    <Card className="w-full">
+    <Card className="w-full border-0 shadow-sm">
       {title && (
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base">{title}</CardTitle>
+        <CardHeader className="pb-3 pt-6">
+          <CardTitle className="text-lg font-semibold">{title}</CardTitle>
         </CardHeader>
       )}
-      <CardContent className="p-4">
-        <ChartContainer config={chartConfig} className="h-80 w-full">
+      <CardContent className="pb-6 pt-0">
+        <ChartContainer config={chartConfig} className="w-full h-96">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={data.data}
-              margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+              margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
+              syncId="anyId"
             >
               <defs>
                 {data.lines.map((line, idx) => {
@@ -70,27 +71,30 @@ export function AreaChartComponent({ data, title }: AreaChartProps) {
                       x2="0"
                       y2="1"
                     >
-                      <stop offset="5%" stopColor={color} stopOpacity={0.8} />
-                      <stop offset="95%" stopColor={color} stopOpacity={0.1} />
+                      <stop offset="0%" stopColor={color} stopOpacity={0.6} />
+                      <stop offset="100%" stopColor={color} stopOpacity={0.05} />
                     </linearGradient>
                   );
                 })}
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
               <XAxis
                 dataKey={timeKey}
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                 tickLine={false}
                 axisLine={false}
+                style={{ fontSize: '11px' }}
               />
               <YAxis
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                 tickLine={false}
                 axisLine={false}
+                style={{ fontSize: '11px' }}
+                width={40}
               />
               <ChartTooltip
-                cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
-                content={<ChartTooltipContent hideLabel={false} />}
+                cursor={{ fill: 'rgba(0, 0, 0, 0.08)' }}
+                content={<ChartTooltipContent hideLabel={false} indicator="line" />}
               />
               {data.lines.map((line, idx) => {
                 const color = CHART_COLORS[idx % CHART_COLORS.length];
@@ -98,16 +102,21 @@ export function AreaChartComponent({ data, title }: AreaChartProps) {
                   <Area
                     key={line.key}
                     dataKey={line.key}
-                    type="monotone"
+                    type="natural"
                     fill={`url(#gradient-${line.key})`}
                     stroke={color}
-                    strokeWidth={2}
+                    strokeWidth={2.5}
                     isAnimationActive={true}
                     dot={false}
+                    stackId="stack"
                   />
                 );
               })}
-              <ChartLegend content={<ChartLegendContent />} />
+              <ChartLegend
+                content={<ChartLegendContent />}
+                verticalAlign="top"
+                height={36}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </ChartContainer>
