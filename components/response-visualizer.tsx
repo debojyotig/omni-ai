@@ -13,10 +13,12 @@ import { detectVisualizablePatterns } from '@/lib/visualization/chart-detector';
 import { transformPatternToChartData, DataMapping } from '@/lib/visualization/chart-transformer';
 import { useExtractionSettingsStore } from '@/lib/stores/extraction-settings-store';
 import { extractVisualizationHint } from '@/lib/agents/visualization-hints';
+import { detectMedia } from '@/lib/visualization/media-detector';
 import { AreaChartComponent } from './charts/area-chart';
 import { BarChartComponent } from './charts/bar-chart';
 import { PieChartComponent } from './charts/pie-chart';
 import { TableViewer } from './charts/table-viewer';
+import { MediaPreviewCard } from './media-preview-card';
 
 interface ResponseVisualizerProps {
   content: string;
@@ -24,6 +26,7 @@ interface ResponseVisualizerProps {
 
 export function ResponseVisualizer({ content }: ResponseVisualizerProps) {
   const [visualizations, setVisualizations] = React.useState<any[]>([]);
+  const [media, setMedia] = React.useState<any[]>([]);
   const { enableLLMExtraction } = useExtractionSettingsStore();
 
   React.useEffect(() => {
@@ -96,15 +99,31 @@ export function ResponseVisualizer({ content }: ResponseVisualizerProps) {
       } catch (error) {
         console.error('Visualization parsing failed:', error);
       }
-    })();
-  }, [content]);
 
-  if (visualizations.length === 0) {
+      // Detect media (images and videos) in content
+      try {
+        const detectedMedia = detectMedia(content);
+        if (detectedMedia.length > 0) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[ResponseVisualizer] Detected media:', detectedMedia.length, 'items');
+          }
+          setMedia(detectedMedia);
+        }
+      } catch (error) {
+        console.error('Media detection failed:', error);
+      }
+    })();
+  }, [content, enableLLMExtraction]);
+
+  if (visualizations.length === 0 && media.length === 0) {
     return null;
   }
 
   return (
-    <div className="space-y-6 my-4">
+    <>
+      {/* Charts and Tables */}
+      {visualizations.length > 0 && (
+      <div className="space-y-6 my-4">
       {visualizations.map((viz, idx) => {
         // Determine visualization type: hint-based or pattern-based
         const isHint = !!viz.hint;
@@ -169,6 +188,20 @@ export function ResponseVisualizer({ content }: ResponseVisualizerProps) {
           return null;
         }
       })}
-    </div>
+      </div>
+      )}
+
+      {/* Media Gallery */}
+      {media.length > 0 && (
+        <div className="my-4">
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3">Media</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {media.map((item, idx) => (
+              <MediaPreviewCard key={idx} media={item} />
+            ))}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
