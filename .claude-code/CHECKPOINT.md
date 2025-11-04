@@ -704,8 +704,15 @@ All foundation work complete with working chat interface, 3 agents, MCP integrat
 3. **✅ WS10 Complete**: Enterprise gateway & multi-LLM support configured
 4. **✅ WS11 Complete**: Simple session persistence with LibSQL storage
 5. **✅ WS12 Complete**: UI Polish with markdown rendering, streaming updates, collapsible tool cards, 3-column layout, and conversation persistence
-6. **Start WS13**: Node.js Distribution & Packaging
-7. **Read checkpoint**: Review detailed task list in `.claude-code/checkpoints/checkpoint-ws13-nodejs-distribution.md`
+6. **📋 WS12.5 Planned**: UI/UX Improvements & Smart Response Visualization (Before WS13)
+7. **Start WS13**: Node.js Distribution & Packaging (After WS12.5)
+
+### Planning Complete for WS12.5
+
+Read these documents to understand the UI/UX improvement plan:
+- **Detailed Spec**: `.claude-code/checkpoints/checkpoint-ws12-5-ui-ux-improvements.md` (3500+ lines)
+- **Industry Analysis**: `docs/UI_UX_INDUSTRY_ANALYSIS.md` (2000+ lines)
+- **Quick Start**: `docs/WS12_5_QUICK_START.md` (1500+ lines)
 
 ### Implementation Order
 
@@ -721,15 +728,29 @@ Must follow sequentially:
 
 ## Context for Next Session
 
-**Current Status**: WS8, WS9, WS10, WS11, WS12 complete ✅, ready for WS13 (Node.js Distribution)
+**Current Status**: WS8-WS12 complete ✅, WS12.5 planned, ready for implementation
 
-**When starting WS13**:
+### Option A: Implement WS12.5 (Recommended)
+**When starting WS12.5** (UI/UX Improvements & Smart Visualization):
+1. Read [checkpoint-ws12-5-ui-ux-improvements.md](./checkpoints/checkpoint-ws12-5-ui-ux-improvements.md) ← Detailed spec (3500+ lines)
+2. Review [docs/UI_UX_INDUSTRY_ANALYSIS.md](../docs/UI_UX_INDUSTRY_ANALYSIS.md) ← Competitive analysis (2000+ lines)
+3. Use [docs/WS12_5_QUICK_START.md](../docs/WS12_5_QUICK_START.md) ← Implementation guide (1500+ lines)
+4. Priority 1: Smart charts visualization + Mobile responsive (Days 1-2)
+5. Priority 2: Accessibility + Error handling (Day 3)
+6. Priority 3: Settings polish + Keyboard shortcuts (Day 4)
+7. **Then proceed to WS13 with production-grade UI**
+
+### Option B: Skip WS12.5, Go Directly to WS13
+**When starting WS13 immediately** (Node.js Distribution):
 1. Read [checkpoint-ws13-nodejs-distribution.md](./checkpoints/checkpoint-ws13-nodejs-distribution.md)
 2. Create production build scripts
 3. Bundle omni-api-mcp as embedded dependency
 4. Create launcher scripts for Unix/Windows
 5. Package as tar.gz and zip archives
 6. Create installation and usage documentation
+7. **Note**: WS12.5 improvements will be needed post-launch for production polish
+
+**Recommendation**: Do WS12.5 first for production-ready UX before distribution
 
 **Supporting Documents**:
 - **Parity Analysis**: [docs/MASTRA_PARITY_ANALYSIS.md](../docs/MASTRA_PARITY_ANALYSIS.md)
@@ -745,12 +766,22 @@ Must follow sequentially:
 - WS10: ✅ Complete (Enterprise gateway & multi-LLM)
 - WS11: ✅ Complete (Simple session persistence)
 - WS12: ✅ Complete (UI Polish & 3-column layout)
-- WS13: 2-3 days remaining (Node.js distribution)
+- **WS12.5: 📋 Planned** (3-4 days, Optional but recommended)
+  - Smart response visualization with charts
+  - Mobile responsiveness
+  - Accessibility improvements (WCAG 2.1 AA)
+  - Error handling & connection status
+  - Settings reorganization
+  - Keyboard shortcuts & conversation management
+- WS13: 2-3 days remaining (Node.js distribution, after WS12.5)
 - WS14 (optional Electron): +3-5 days
-- **Total to Production (Node.js)**: ~4-5 weeks from WS1 start
-- **Total with Electron**: ~5-6 weeks from WS1 start
+- **Total to Production (Node.js, with WS12.5)**: ~5-6 weeks from WS1 start
+- **Total to Production (Node.js, without WS12.5)**: ~4-5 weeks from WS1 start
+- **Total with Electron**: ~6-8 weeks from WS1 start
 
 **Time Savings**: 10-13 days (nearly 50%) thanks to Claude SDK native features!
+
+**Recommendation**: Do WS12.5 before distribution (WS13) for production-grade UX polish
 
 ---
 
