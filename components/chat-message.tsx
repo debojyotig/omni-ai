@@ -17,6 +17,7 @@ import remarkGfm from 'remark-gfm';
 import { User, Bot } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ResponseVisualizer } from '@/components/response-visualizer';
+import { stripVisualizedContent } from '@/lib/visualization/content-stripper';
 import { cn } from '@/lib/utils';
 
 interface ChatMessageProps {
@@ -27,6 +28,9 @@ interface ChatMessageProps {
 
 export function ChatMessage({ role, content, isStreaming = false }: ChatMessageProps) {
   const isUser = role === 'user';
+
+  // For assistant messages, strip visualized content to avoid duplication
+  const displayContent = !isUser ? stripVisualizedContent(content) : content;
 
   return (
     <div className="group w-full">
@@ -51,7 +55,7 @@ export function ChatMessage({ role, content, isStreaming = false }: ChatMessageP
               {/* Smart visualization first */}
               <ResponseVisualizer content={content} />
 
-              {/* Markdown content */}
+              {/* Markdown content (with tables/visualized data stripped) */}
               <div className="prose prose-[15px] dark:prose-invert max-w-none">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
@@ -131,7 +135,7 @@ export function ChatMessage({ role, content, isStreaming = false }: ChatMessageP
                     },
                   }}
                 >
-                  {content}
+                  {displayContent}
                 </ReactMarkdown>
                 {isStreaming && (
                   <span className="inline-block w-1.5 h-5 ml-1 bg-foreground/60 animate-pulse" />
