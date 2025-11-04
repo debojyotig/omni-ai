@@ -9,7 +9,6 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { getConversationDBStore } from '@/lib/storage/conversation-db-store'
 
 export interface Message {
   id: string
@@ -144,29 +143,10 @@ export const useConversationStore = create<ConversationStoreWithRehydrate>()(
 
       loadFromDatabase: async (resourceId: string = 'default-user') => {
         try {
-          const db = getConversationDBStore()
-          const dbConversations = await db.getConversations(resourceId)
-          const conversations: Conversation[] = []
-
-          for (const dbConv of dbConversations) {
-            const result = await db.getConversation(dbConv.id, resourceId)
-            if (result) {
-              conversations.push({
-                id: result.conversation.id,
-                title: result.conversation.title,
-                messages: result.messages.map((msg) => ({
-                  id: msg.id,
-                  role: msg.role,
-                  content: msg.content,
-                  timestamp: msg.timestamp,
-                })),
-                createdAt: new Date(result.conversation.createdAt).getTime(),
-                updatedAt: new Date(result.conversation.updatedAt).getTime(),
-              })
-            }
-          }
-
-          set({ conversations })
+          const response = await fetch(`/api/conversations/load?resourceId=${resourceId}`)
+          if (!response.ok) throw new Error('Failed to load conversations from API')
+          const data = await response.json()
+          set({ conversations: data.conversations })
         } catch (error) {
           console.error('[ConversationStore] Failed to load from database:', error)
         }
@@ -174,8 +154,12 @@ export const useConversationStore = create<ConversationStoreWithRehydrate>()(
 
       syncCreateConversation: async (id: string, title: string, resourceId: string = 'default-user') => {
         try {
-          const db = getConversationDBStore()
-          await db.createConversation(id, title, resourceId)
+          const response = await fetch('/api/conversations/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, title, resourceId }),
+          })
+          if (!response.ok) throw new Error('Failed to create conversation')
         } catch (error) {
           console.error('[ConversationStore] Failed to sync create:', error)
         }
@@ -183,8 +167,12 @@ export const useConversationStore = create<ConversationStoreWithRehydrate>()(
 
       syncDeleteConversation: async (id: string, resourceId: string = 'default-user') => {
         try {
-          const db = getConversationDBStore()
-          await db.deleteConversation(id, resourceId)
+          const response = await fetch('/api/conversations/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conversationId: id, resourceId }),
+          })
+          if (!response.ok) throw new Error('Failed to delete conversation')
         } catch (error) {
           console.error('[ConversationStore] Failed to sync delete:', error)
         }
@@ -196,15 +184,19 @@ export const useConversationStore = create<ConversationStoreWithRehydrate>()(
         resourceId: string = 'default-user'
       ) => {
         try {
-          const db = getConversationDBStore()
-          await db.addMessage(
-            conversationId,
-            message.id,
-            message.role,
-            message.content,
-            message.timestamp,
-            resourceId
-          )
+          const response = await fetch('/api/conversations/message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              conversationId,
+              messageId: message.id,
+              role: message.role,
+              content: message.content,
+              timestamp: message.timestamp,
+              resourceId,
+            }),
+          })
+          if (!response.ok) throw new Error('Failed to add message')
         } catch (error) {
           console.error('[ConversationStore] Failed to sync message:', error)
         }
@@ -216,8 +208,12 @@ export const useConversationStore = create<ConversationStoreWithRehydrate>()(
         resourceId: string = 'default-user'
       ) => {
         try {
-          const db = getConversationDBStore()
-          await db.updateConversationTitle(id, title, resourceId)
+          const response = await fetch('/api/conversations/title', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conversationId: id, title, resourceId }),
+          })
+          if (!response.ok) throw new Error('Failed to update conversation title')
         } catch (error) {
           console.error('[ConversationStore] Failed to sync title update:', error)
         }
