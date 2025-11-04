@@ -24,18 +24,25 @@ export function ResponseVisualizer({ content }: ResponseVisualizerProps) {
 
   React.useEffect(() => {
     try {
+      console.log('📊 ResponseVisualizer mounted, content length:', content.length);
       const patterns = detectVisualizablePatterns(content);
-      if (patterns.length === 0) return;
+      console.log('🎨 Patterns from detector:', patterns.length);
+
+      if (patterns.length === 0) {
+        console.log('⚠️ No patterns detected, returning null');
+        return;
+      }
 
       const chartData = patterns.map((pattern) => ({
         pattern,
         data: transformPatternToChartData(pattern),
       }));
 
+      console.log('✅ Chart data prepared:', chartData.length);
       setVisualizations(chartData);
     } catch (error) {
-      // Silently fail if visualization parsing fails
-      console.debug('Visualization parsing failed:', error);
+      // Log visualization parsing errors
+      console.error('❌ Visualization parsing failed:', error);
     }
   }, [content]);
 
