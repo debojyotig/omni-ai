@@ -50,6 +50,7 @@ export function ChatInterface() {
   // Hydration and initial conversation setup
   useEffect(() => {
     setIsMounted(true);
+
     // Wait for store to rehydrate from localStorage before creating a conversation
     const checkRehydration = () => {
       const state = useConversationStore.getState() as any;
@@ -57,13 +58,17 @@ export function ChatInterface() {
         if (state.conversations.length === 0) {
           createConversation();
         }
+        // Clear activity state on initial hydration
+        clearSteps();
+        const activityState = useActivityStore.getState();
+        activityState.setOpen(false);
       } else {
         // Check again after a short delay
         setTimeout(checkRehydration, 50);
       }
     };
     checkRehydration();
-  }, []);
+  }, [clearSteps, createConversation]);
 
   // Clear activity and streaming state when switching conversations
   useEffect(() => {
