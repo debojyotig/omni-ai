@@ -1,13 +1,14 @@
 /**
  * Bar Chart Component
  *
- * Displays comparison data with bar visualization
+ * Displays comparison data with bar visualization using Recharts and shadcn styling
  */
 
 'use client';
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ComparisonData } from '@/lib/visualization/chart-transformer';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface BarChartProps {
   data: ComparisonData;
@@ -23,40 +24,57 @@ export function BarChartComponent({ data, title, height = 300 }: BarChartProps) 
   const categoryKey = Object.keys(data.data[0])[0];
 
   return (
-    <div className="w-full space-y-2">
-      {title && <h3 className="font-semibold text-sm">{title}</h3>}
-      <div className="w-full h-[300px] rounded-lg border border-border p-4">
-        <ResponsiveContainer width="100%" height={height}>
-          <BarChart
-            data={data.data}
-            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis
-              dataKey={categoryKey}
-              className="text-xs"
-            />
-            <YAxis className="text-xs" />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'hsl(var(--background))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '6px',
-              }}
-            />
-            <Legend />
-            {data.bars.map((bar) => (
-              <Bar
-                key={bar.key}
-                dataKey={bar.key}
-                fill={bar.fill}
-                name={bar.name}
-                radius={[4, 4, 0, 0]}
+    <Card className="w-full">
+      {title && (
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">{title}</CardTitle>
+        </CardHeader>
+      )}
+      <CardContent className="pl-2 pr-2 pb-4">
+        <div style={{ width: '100%', height: `${height}px` }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={data.data}
+              margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis
+                dataKey={categoryKey}
+                tick={{ fontSize: 12 }}
+                stroke="hsl(var(--muted-foreground))"
               />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
+              <YAxis
+                tick={{ fontSize: 12 }}
+                stroke="hsl(var(--muted-foreground))"
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--background))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '6px',
+                  color: 'hsl(var(--foreground))',
+                }}
+              />
+              <Legend
+                wrapperStyle={{
+                  paddingTop: '16px',
+                  color: 'hsl(var(--foreground))',
+                }}
+              />
+              {data.bars.map((bar) => (
+                <Bar
+                  key={bar.key}
+                  dataKey={bar.key}
+                  fill={bar.fill}
+                  name={bar.name}
+                  radius={[6, 6, 0, 0]}
+                  isAnimationActive={true}
+                />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
