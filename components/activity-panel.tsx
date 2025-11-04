@@ -45,7 +45,13 @@ export function ActivityPanel() {
   const runningDuration = getRunningDuration()
 
   return (
-    <div className="w-80 border-l bg-background flex flex-col h-full overflow-hidden self-stretch">
+    <div
+      className="w-80 border-l bg-background flex flex-col h-full overflow-hidden self-stretch"
+      role="region"
+      aria-label="Investigation Progress"
+      aria-live="polite"
+      aria-atomic="false"
+    >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
         <div className="flex items-center gap-2">
