@@ -65,10 +65,25 @@ export function ChatInterface() {
     checkRehydration();
   }, []);
 
-  // Clear activity steps when switching conversations (not sending a message)
+  // Clear activity and streaming state when switching conversations
   useEffect(() => {
     if (activeConversationId) {
+      // Clear streaming state from previous conversation
+      setStreamingContent('');
+
+      // Abort any in-flight request
+      if (abortController) {
+        abortController.abort();
+        setAbortController(null);
+      }
+
+      // Reset loading state
+      setIsLoading(false);
+
+      // Clear activity steps and close panel for new conversation
       setThreadId(activeConversationId);
+      const { setOpen } = useActivityStore.getState();
+      setOpen(false); // Close activity panel when switching conversations
     }
   }, [activeConversationId, setThreadId]);
 
