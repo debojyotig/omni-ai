@@ -25,6 +25,18 @@ import {
   Dot,
 } from 'lucide-react';
 
+/**
+ * Clean markdown formatting from cell content
+ */
+function cleanMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '$1') // Bold
+    .replace(/\*(.+?)\*/g, '$1') // Italic
+    .replace(/__(.+?)__/g, '$1') // Bold alternative
+    .replace(/_(.+?)_/g, '$1') // Italic alternative
+    .replace(/`(.+?)`/g, '$1'); // Code
+}
+
 interface TableViewerProps {
   data: TableData;
   title?: string;
@@ -38,7 +50,9 @@ function renderCell(content: string, headerName?: string) {
     return content;
   }
 
-  const lowerContent = content.toLowerCase().trim();
+  // Clean markdown from content first
+  const cleanedContent = cleanMarkdown(content);
+  const lowerContent = cleanedContent.toLowerCase().trim();
   const lowerHeader = headerName?.toLowerCase() || '';
 
   // Status detection: Active, Inactive, Retired, In Development, etc.
@@ -56,7 +70,7 @@ function renderCell(content: string, headerName?: string) {
         <div className="flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
           <span className="font-medium text-green-700 dark:text-green-300">
-            {content}
+            {cleanedContent}
           </span>
         </div>
       );
@@ -70,7 +84,7 @@ function renderCell(content: string, headerName?: string) {
         <div className="flex items-center gap-2">
           <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
           <span className="font-medium text-amber-700 dark:text-amber-300">
-            {content}
+            {cleanedContent}
           </span>
         </div>
       );
@@ -80,7 +94,7 @@ function renderCell(content: string, headerName?: string) {
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
           <span className="font-medium text-blue-700 dark:text-blue-300">
-            {content}
+            {cleanedContent}
           </span>
         </div>
       );
@@ -115,7 +129,7 @@ function renderCell(content: string, headerName?: string) {
   }
 
   // Date detection (e.g., "2024-01-15", "Jan 15, 2024", "15/01/2024")
-  const dateMatch = content.match(
+  const dateMatch = cleanedContent.match(
     /^\d{1,4}[-\/\.]\d{1,2}[-\/\.]\d{1,4}$|^[A-Za-z]+\s+\d{1,2},?\s+\d{4}$/
   );
   if (
@@ -128,7 +142,7 @@ function renderCell(content: string, headerName?: string) {
     return (
       <div className="flex items-center gap-2">
         <Clock className="w-4 h-4 text-slate-500 dark:text-slate-400 flex-shrink-0" />
-        <span className="font-medium">{content}</span>
+        <span className="font-medium">{cleanedContent}</span>
       </div>
     );
   }
@@ -152,7 +166,7 @@ function renderCell(content: string, headerName?: string) {
           rel="noopener noreferrer"
           className="text-blue-600 dark:text-blue-400 hover:underline truncate"
         >
-          {content}
+          {cleanedContent}
         </a>
       </div>
     );
@@ -169,13 +183,13 @@ function renderCell(content: string, headerName?: string) {
     return (
       <div className="flex items-center gap-1 font-semibold text-slate-900 dark:text-slate-100">
         <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-        {content}
+        {cleanedContent}
       </div>
     );
   }
 
-  // Default: return as-is
-  return content;
+  // Default: return as-is (already cleaned)
+  return cleanedContent;
 }
 
 export function TableViewer({ data, title }: TableViewerProps) {
