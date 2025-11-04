@@ -8,10 +8,10 @@
 
 import React from 'react';
 import { detectVisualizablePatterns } from '@/lib/visualization/chart-detector';
+import { extractStructuredData } from '@/lib/visualization/data-extractor';
 import { transformPatternToChartData } from '@/lib/visualization/chart-transformer';
 import { AreaChartComponent } from './charts/area-chart';
 import { BarChartComponent } from './charts/bar-chart';
-import { LineChartComponent } from './charts/line-chart';
 import { PieChartComponent } from './charts/pie-chart';
 import { TableViewer } from './charts/table-viewer';
 
@@ -24,12 +24,18 @@ export function ResponseVisualizer({ content }: ResponseVisualizerProps) {
 
   React.useEffect(() => {
     try {
-      console.log('📊 ResponseVisualizer mounted, content length:', content.length);
-      const patterns = detectVisualizablePatterns(content);
-      console.log('🎨 Patterns from detector:', patterns.length);
+      // Stage 1: Try standard pattern detection (JSON + markdown tables)
+      let patterns = detectVisualizablePatterns(content);
+
+      // Stage 2: If no patterns found, try plain text data extraction
+      if (patterns.length === 0) {
+        const plainTextData = extractStructuredData(content);
+        if (plainTextData) {
+          patterns = [plainTextData];
+        }
+      }
 
       if (patterns.length === 0) {
-        console.log('⚠️ No patterns detected, returning null');
         return;
       }
 
@@ -38,11 +44,9 @@ export function ResponseVisualizer({ content }: ResponseVisualizerProps) {
         data: transformPatternToChartData(pattern),
       }));
 
-      console.log('✅ Chart data prepared:', chartData.length);
       setVisualizations(chartData);
     } catch (error) {
-      // Log visualization parsing errors
-      console.error('❌ Visualization parsing failed:', error);
+      console.error('Visualization parsing failed:', error);
     }
   }, [content]);
 
@@ -93,7 +97,6 @@ export function ResponseVisualizer({ content }: ResponseVisualizerProps) {
               return null;
           }
         } catch (error) {
-          console.debug(`Failed to render ${pattern.type} chart:`, error);
           return null;
         }
       })}

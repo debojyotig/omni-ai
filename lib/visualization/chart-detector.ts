@@ -24,7 +24,6 @@ export interface DataPattern {
 function extractJsonBlocks(content: string): any[] {
   const jsonBlocks: any[] = [];
 
-  console.log('🔍 extractJsonBlocks called with content length:', content.length);
 
   // Strategy 1: Look for code blocks with ```json
   const jsonCodeBlockRegex = /```json\s*\n([\s\S]*?)\n```/g;
@@ -32,10 +31,8 @@ function extractJsonBlocks(content: string): any[] {
   while ((match = jsonCodeBlockRegex.exec(content)) !== null) {
     try {
       const parsed = JSON.parse(match[1].trim());
-      console.log('✅ Extracted from code block:', parsed);
       jsonBlocks.push(parsed);
     } catch (e) {
-      console.log('❌ Failed to parse code block JSON:', e);
     }
   }
 
@@ -48,7 +45,6 @@ function extractJsonBlocks(content: string): any[] {
     if (chars[i] === '{') {
       if (braceCount === 0) {
         start = i;
-        console.log('🟢 Found opening brace at position', i);
       }
       braceCount++;
     } else if (chars[i] === '}') {
@@ -56,20 +52,16 @@ function extractJsonBlocks(content: string): any[] {
       if (braceCount === 0 && start !== -1) {
         try {
           const jsonStr = content.substring(start, i + 1);
-          console.log('📄 Extracted substring:', jsonStr);
           const parsed = JSON.parse(jsonStr);
-          console.log('✅ Successfully parsed bare JSON:', parsed);
           jsonBlocks.push(parsed);
           start = -1;
         } catch (e) {
-          console.log('❌ Failed to parse bare JSON:', e);
           start = -1;
         }
       }
     }
   }
 
-  console.log('📊 Total JSON blocks found:', jsonBlocks.length);
   return jsonBlocks;
 }
 
@@ -125,15 +117,12 @@ function extractMarkdownTables(
  */
 function isTimeSeries(data: any): boolean {
   if (!data || typeof data !== 'object') {
-    console.log('⚠️ isTimeSeries: data is not an object');
     return false;
   }
 
   const keys = Object.keys(data);
-  console.log('  📋 Keys:', keys);
 
   if (keys.length < 2) {
-    console.log('  ⚠️ isTimeSeries: less than 2 keys');
     return false;
   }
 
@@ -147,18 +136,14 @@ function isTimeSeries(data: any): boolean {
       k.toLowerCase().includes('week') ||
       k.toLowerCase().includes('month')
   );
-  console.log('  🕐 hasTimeKey:', hasTimeKey);
 
   // Check if values contain numeric sequences
   const hasNumericValues = keys.some((k) => {
     const value = data[k];
     const isNumArray = Array.isArray(value) && value.length > 0 && value.every((v) => typeof v === 'number');
-    console.log(`    - ${k}: isArray=${Array.isArray(value)}, isNumArray=${isNumArray}`);
     return isNumArray;
   });
 
-  console.log('  📊 hasNumericValues:', hasNumericValues);
-  console.log('  ✓ Result:', hasTimeKey || (hasNumericValues && keys.length <= 5));
 
   return hasTimeKey || (hasNumericValues && keys.length <= 5);
 }
@@ -204,17 +189,13 @@ function isDistribution(data: any): boolean {
 export function detectVisualizablePatterns(content: string): DataPattern[] {
   const patterns: DataPattern[] = [];
 
-  console.log('🎯 detectVisualizablePatterns called');
 
   // Extract and analyze JSON blocks
   const jsonBlocks = extractJsonBlocks(content);
-  console.log('📦 JSON blocks extracted:', jsonBlocks.length);
 
   for (const block of jsonBlocks) {
-    console.log('🔎 Analyzing block:', block);
 
     if (isTimeSeries(block)) {
-      console.log('✅ Detected as timeseries');
       patterns.push({
         type: 'timeseries',
         confidence: 0.85,
@@ -226,7 +207,6 @@ export function detectVisualizablePatterns(content: string): DataPattern[] {
         },
       });
     } else if (isDistribution(block)) {
-      console.log('✅ Detected as distribution');
       patterns.push({
         type: 'distribution',
         confidence: 0.8,
@@ -236,7 +216,6 @@ export function detectVisualizablePatterns(content: string): DataPattern[] {
         },
       });
     } else if (isComparison(block)) {
-      console.log('✅ Detected as comparison');
       patterns.push({
         type: 'comparison',
         confidence: 0.75,
@@ -246,13 +225,11 @@ export function detectVisualizablePatterns(content: string): DataPattern[] {
         },
       });
     } else {
-      console.log('❌ Block did not match any pattern');
     }
   }
 
   // Extract and analyze markdown tables
   const tables = extractMarkdownTables(content);
-  console.log('📋 Markdown tables found:', tables.length);
 
   for (const table of tables) {
     patterns.push({
@@ -267,7 +244,6 @@ export function detectVisualizablePatterns(content: string): DataPattern[] {
 
   // Return only high-confidence patterns
   const filtered = patterns.filter((p) => p.confidence >= 0.75).slice(0, 3);
-  console.log('🎨 Final patterns returned:', filtered.length, filtered);
   return filtered; // Max 3 visualizations per message
 }
 
