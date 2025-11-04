@@ -200,52 +200,77 @@ function extractKeyValueData(content: string): DataPattern | null {
 
 /**
  * Checks if extracted table data is actually time-series data
+ * More aggressive detection to convert tables to charts when possible
  */
 function isTableTimeSeries(headers: string[], rows: string[][]): boolean {
   if (rows.length < 2 || headers.length < 2) return false;
 
   // Look for date/time related headers
-  const hasDateHeader = headers.some(
+  const dateHeaderIdx = headers.findIndex(
     (h) =>
       h.toLowerCase().includes('date') ||
       h.toLowerCase().includes('time') ||
       h.toLowerCase().includes('month') ||
-      h.toLowerCase().includes('day')
+      h.toLowerCase().includes('day') ||
+      h.toLowerCase().includes('period')
   );
 
-  if (!hasDateHeader) return false;
+  if (dateHeaderIdx === -1) return false;
 
-  // Check if other columns are mostly numeric
+  // Get non-date headers
   const numericHeaders = headers.filter(
-    (h) => !h.toLowerCase().includes('date') && !h.toLowerCase().includes('time')
+    (_, idx) =>
+      idx !== dateHeaderIdx &&
+      !headers[idx].toLowerCase().includes('time')
   );
 
-  let numericColumnCount = 0;
-  for (const header of numericHeaders) {
-    let isNumeric = true;
-    for (const row of rows) {
-      const idx = headers.indexOf(header);
-      if (idx === -1) continue;
+  if (numericHeaders.length === 0) return false;
 
-      const cell = row[idx]?.trim() || '';
-      // Check if looks numeric (handles currency, percentages, etc.)
+  // Count how many columns are actually numeric
+  let numericColumnCount = 0;
+
+  for (const header of numericHeaders) {
+    const colIdx = headers.indexOf(header);
+    if (colIdx === -1) continue;
+
+    let numericCount = 0;
+    let totalCount = 0;
+
+    for (const row of rows) {
+      const cell = row[colIdx]?.trim() || '';
+      if (!cell) continue;
+
+      totalCount++;
+
+      // Clean the cell: remove markdown, currency symbols, etc.
+      const cleaned = cell
+        .replace(/\*\*/g, '') // Remove markdown bold
+        .replace(/[^\d.,%-]/g, '') // Keep only numbers, dots, commas, %, minus
+        .trim();
+
+      // Check if it's numeric (currency, percentage, or plain number)
       if (
-        cell &&
-        !cell.match(/^[\d,.-]+%?$/) &&
-        !cell.toLowerCase().includes('baseline')
+        cleaned &&
+        /[\d.,]/.test(cleaned) &&
+        !cleaned.match(/^[a-zA-Z]+$/)
       ) {
-        isNumeric = false;
-        break;
+        numericCount++;
       }
     }
-    if (isNumeric) numericColumnCount++;
+
+    // If at least 70% of column is numeric, count it
+    if (totalCount > 0 && numericCount >= totalCount * 0.7) {
+      numericColumnCount++;
+    }
   }
 
-  return numericColumnCount >= Math.max(1, numericHeaders.length * 0.7);
+  // Need at least 1 numeric column for time-series
+  return numericColumnCount >= Math.max(1, numericHeaders.length * 0.5);
 }
 
 /**
  * Converts a table to time-series format if it looks like time-series
+ * Intelligently selects primary numeric column for visualization
  */
 function convertTableToTimeSeries(headers: string[], rows: string[][]): DataPattern {
   const dateHeaderIdx = headers.findIndex(
@@ -253,32 +278,96 @@ function convertTableToTimeSeries(headers: string[], rows: string[][]): DataPatt
       h.toLowerCase().includes('date') ||
       h.toLowerCase().includes('time') ||
       h.toLowerCase().includes('month') ||
-      h.toLowerCase().includes('day')
+      h.toLowerCase().includes('day') ||
+      h.toLowerCase().includes('period')
   );
 
   const dateHeader = dateHeaderIdx !== -1 ? headers[dateHeaderIdx] : 'Date';
 
+  // Clean date values (remove markdown bold syntax)
+  const cleanedDates = rows.map((row) =>
+    (row[dateHeaderIdx] || '')
+      .replace(/\*\*/g, '') // Remove markdown bold
+      .trim()
+  );
+
   // Build time-series data structure
   const timeSeriesData: Record<string, any> = {
-    [dateHeader]: rows.map((row) => row[dateHeaderIdx] || ''),
+    [dateHeader]: cleanedDates,
   };
 
-  // Add numeric columns as values
-  for (let i = 0; i < headers.length; i++) {
-    if (i !== dateHeaderIdx) {
-      const values = rows.map((row) => {
-        const val = row[i]?.trim() || '';
-        // Try to parse as number, removing currency symbols, commas, percentages
-        const numeric = parseFloat(val.replace(/[$,%]/g, ''));
-        return isNaN(numeric) ? val : numeric;
-      });
+  // Identify and add numeric columns
+  const numericColumns: { idx: number; header: string; values: number[] }[] = [];
 
-      // Only include if mostly numeric
-      const numericCount = values.filter((v) => typeof v === 'number').length;
-      if (numericCount >= values.length * 0.7) {
-        timeSeriesData[headers[i]] = values;
+  for (let i = 0; i < headers.length; i++) {
+    if (i === dateHeaderIdx) continue;
+
+    const values: number[] = [];
+    let numericCount = 0;
+
+    for (const row of rows) {
+      const val = row[i]?.trim() || '';
+
+      if (!val) {
+        values.push(NaN);
+        continue;
+      }
+
+      // Clean: remove markdown, currency, percentages, commas
+      const cleaned = val
+        .replace(/\*\*/g, '') // Markdown bold
+        .replace(/[$]/g, '') // Currency
+        .replace(/%/g, '') // Percent sign
+        .replace(/,/g, '') // Thousand separators
+        .trim();
+
+      const numeric = parseFloat(cleaned);
+
+      if (!isNaN(numeric)) {
+        values.push(numeric);
+        numericCount++;
+      } else {
+        values.push(NaN);
       }
     }
+
+    // Include column if mostly numeric (>70%)
+    if (numericCount >= values.length * 0.7) {
+      numericColumns.push({
+        idx: i,
+        header: headers[i],
+        values,
+      });
+    }
+  }
+
+  // Add numeric columns to time-series
+  for (const col of numericColumns) {
+    timeSeriesData[col.header] = col.values;
+  }
+
+  // If no numeric columns found, return table pattern instead
+  if (numericColumns.length === 0) {
+    return {
+      type: 'table',
+      confidence: 0.7,
+      data: { headers, rows },
+      metadata: {
+        title: 'Data Table',
+      },
+    };
+  }
+
+  // Determine appropriate y-axis label from numeric column
+  const primaryColumn = numericColumns[0];
+  let yAxisLabel = primaryColumn.header;
+
+  if (primaryColumn.header.toLowerCase().includes('price')) {
+    yAxisLabel = 'Price';
+  } else if (primaryColumn.header.toLowerCase().includes('value')) {
+    yAxisLabel = 'Value';
+  } else if (primaryColumn.header.toLowerCase().includes('count')) {
+    yAxisLabel = 'Count';
   }
 
   return {
@@ -288,7 +377,8 @@ function convertTableToTimeSeries(headers: string[], rows: string[][]): DataPatt
     metadata: {
       title: 'Time Series Data',
       xAxisLabel: dateHeader,
-      yAxisLabel: 'Value',
+      yAxisLabel,
+      description: `${numericColumns.length} metric${numericColumns.length > 1 ? 's' : ''} over time`,
     },
   };
 }
