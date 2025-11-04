@@ -123,11 +123,19 @@ export function transformComparisonData(pattern: DataPattern): ComparisonData {
   const keys = Object.keys(data);
 
   // Separate category and value keys
-  const categoryKey = keys.find(
-    (k) => typeof data[k] === 'string'
-  ) || keys[0];
+  // Prefer the key with string values (for category labels)
+  let categoryKey = keys.find((k) => {
+    if (typeof data[k] === 'string') return true;
+    if (Array.isArray(data[k]) && data[k].length > 0 && typeof data[k][0] === 'string') {
+      return true;
+    }
+    return false;
+  }) || keys[0];
 
-  const valueKeys = keys.filter((k) => typeof data[k] === 'number');
+  // Find value keys: numeric values or numeric arrays, excluding the category key
+  const valueKeys = keys.filter(
+    (k) => k !== categoryKey && (typeof data[k] === 'number' || Array.isArray(data[k]))
+  );
 
   const chartData: ChartDataPoint[] = [];
 
