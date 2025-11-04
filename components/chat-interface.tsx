@@ -65,6 +65,13 @@ export function ChatInterface() {
     checkRehydration();
   }, []);
 
+  // Clear activity steps when switching conversations (not sending a message)
+  useEffect(() => {
+    if (activeConversationId) {
+      setThreadId(activeConversationId);
+    }
+  }, [activeConversationId, setThreadId]);
+
   // Auto-scroll to bottom
   useEffect(() => {
     if (scrollRef.current) {
