@@ -40,6 +40,9 @@ export function ChatInterface() {
     createConversation,
     addMessage,
     getActiveConversation,
+    loadFromDatabase,
+    syncCreateConversation,
+    syncAddMessage,
   } = useConversationStore();
   const { addStep, updateStep, completeStep, clearSteps, setThreadId } = useActivityStore();
 
@@ -51,12 +54,22 @@ export function ChatInterface() {
   useEffect(() => {
     setIsMounted(true);
 
-    // Wait for store to rehydrate from localStorage before creating a conversation
-    const checkRehydration = () => {
+    // Wait for store to rehydrate from localStorage before loading from database
+    const checkRehydration = async () => {
       const state = useConversationStore.getState() as any;
       if (state._hasHydrated) {
-        if (state.conversations.length === 0) {
-          createConversation();
+        // Load conversations from database
+        await loadFromDatabase('default-user');
+
+        const updatedState = useConversationStore.getState() as any;
+        if (updatedState.conversations.length === 0) {
+          const newConversationId = createConversation();
+          // Sync the newly created conversation to database
+          const newState = useConversationStore.getState() as any;
+          const newConversation = newState.conversations.find((c: any) => c.id === newConversationId);
+          if (newConversation) {
+            await syncCreateConversation(newConversationId, newConversation.title, 'default-user');
+          }
         }
         // Clear activity state on initial hydration
         clearSteps();
@@ -68,7 +81,7 @@ export function ChatInterface() {
       }
     };
     checkRehydration();
-  }, [clearSteps, createConversation]);
+  }, [clearSteps, createConversation, loadFromDatabase, syncCreateConversation]);
 
   // Clear activity and streaming state when switching conversations
   // NOTE: We do NOT abort the request - it continues in background and completes when switched back
@@ -124,6 +137,9 @@ export function ChatInterface() {
     };
 
     addMessage(messageConversationId, userMessage);
+    // Sync user message to database
+    syncAddMessage(messageConversationId, userMessage, 'default-user');
+
     const currentInput = input;
     setInput('');
     setIsLoading(true);
@@ -330,6 +346,8 @@ export function ChatInterface() {
           timestamp: Date.now(),
         };
         addMessage(messageConversationId, assistantMessage);
+        // Sync assistant message to database
+        syncAddMessage(messageConversationId, assistantMessage, 'default-user');
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {

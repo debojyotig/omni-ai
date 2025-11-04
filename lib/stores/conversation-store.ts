@@ -1,12 +1,15 @@
 /**
  * Conversation Store
  *
- * Manages multiple conversations with persistence to localStorage.
- * Supports creating, switching, deleting conversations.
+ * Manages multiple conversations with hybrid persistence:
+ * - In-memory Zustand store for fast access
+ * - LibSQL database for cross-browser persistence
+ * - Async methods for database operations
  */
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { getConversationDBStore } from '@/lib/storage/conversation-db-store'
 
 export interface Message {
   id: string
@@ -27,7 +30,7 @@ interface ConversationStore {
   conversations: Conversation[]
   activeConversationId: string | null
 
-  // Actions
+  // Sync actions (in-memory only)
   createConversation: () => string
   deleteConversation: (id: string) => void
   setActiveConversation: (id: string) => void
@@ -35,6 +38,14 @@ interface ConversationStore {
   updateConversationTitle: (id: string, title: string) => void
   getActiveConversation: () => Conversation | null
   clearAllConversations: () => void
+  setConversations: (conversations: Conversation[]) => void
+
+  // Async database methods
+  loadFromDatabase: (resourceId?: string) => Promise<void>
+  syncCreateConversation: (id: string, title: string, resourceId?: string) => Promise<void>
+  syncDeleteConversation: (id: string, resourceId?: string) => Promise<void>
+  syncAddMessage: (conversationId: string, message: Message, resourceId?: string) => Promise<void>
+  syncUpdateConversationTitle: (id: string, title: string, resourceId?: string) => Promise<void>
 }
 
 interface ConversationStoreWithRehydrate extends ConversationStore {
@@ -125,6 +136,91 @@ export const useConversationStore = create<ConversationStoreWithRehydrate>()(
 
       clearAllConversations: () => {
         set({ conversations: [], activeConversationId: null })
+      },
+
+      setConversations: (conversations: Conversation[]) => {
+        set({ conversations })
+      },
+
+      loadFromDatabase: async (resourceId: string = 'default-user') => {
+        try {
+          const db = getConversationDBStore()
+          const dbConversations = await db.getConversations(resourceId)
+          const conversations: Conversation[] = []
+
+          for (const dbConv of dbConversations) {
+            const result = await db.getConversation(dbConv.id, resourceId)
+            if (result) {
+              conversations.push({
+                id: result.conversation.id,
+                title: result.conversation.title,
+                messages: result.messages.map((msg) => ({
+                  id: msg.id,
+                  role: msg.role,
+                  content: msg.content,
+                  timestamp: msg.timestamp,
+                })),
+                createdAt: new Date(result.conversation.createdAt).getTime(),
+                updatedAt: new Date(result.conversation.updatedAt).getTime(),
+              })
+            }
+          }
+
+          set({ conversations })
+        } catch (error) {
+          console.error('[ConversationStore] Failed to load from database:', error)
+        }
+      },
+
+      syncCreateConversation: async (id: string, title: string, resourceId: string = 'default-user') => {
+        try {
+          const db = getConversationDBStore()
+          await db.createConversation(id, title, resourceId)
+        } catch (error) {
+          console.error('[ConversationStore] Failed to sync create:', error)
+        }
+      },
+
+      syncDeleteConversation: async (id: string, resourceId: string = 'default-user') => {
+        try {
+          const db = getConversationDBStore()
+          await db.deleteConversation(id, resourceId)
+        } catch (error) {
+          console.error('[ConversationStore] Failed to sync delete:', error)
+        }
+      },
+
+      syncAddMessage: async (
+        conversationId: string,
+        message: Message,
+        resourceId: string = 'default-user'
+      ) => {
+        try {
+          const db = getConversationDBStore()
+          await db.addMessage(
+            conversationId,
+            message.id,
+            message.role,
+            message.content,
+            message.timestamp,
+            resourceId
+          )
+        } catch (error) {
+          console.error('[ConversationStore] Failed to sync message:', error)
+        }
+      },
+
+      syncUpdateConversationTitle: async (
+        id: string,
+        title: string,
+        resourceId: string = 'default-user'
+      ) => {
+        try {
+          const db = getConversationDBStore()
+          await db.updateConversationTitle(id, title, resourceId)
+        } catch (error) {
+          console.error('[ConversationStore] Failed to sync title update:', error)
+        }
       },
     }),
     {
