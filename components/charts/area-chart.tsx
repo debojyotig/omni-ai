@@ -10,23 +10,12 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer } fro
 import { TimeSeriesData } from '@/lib/visualization/chart-transformer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart';
+import { CHART_COLORS } from '@/lib/visualization/chart-colors';
 
 interface AreaChartProps {
   data: TimeSeriesData;
   title?: string;
 }
-
-// Color palette for chart lines
-const CHART_COLORS = [
-  '#3b82f6', // blue
-  '#ef4444', // red
-  '#10b981', // green
-  '#f59e0b', // amber
-  '#8b5cf6', // purple
-  '#ec4899', // pink
-  '#14b8a6', // teal
-  '#f97316', // orange
-];
 
 export function AreaChartComponent({ data, title }: AreaChartProps) {
   if (!data.data || data.data.length === 0) {

@@ -6,6 +6,7 @@
  */
 
 import { DataPattern } from './chart-detector';
+import { CHART_COLORS } from './chart-colors';
 
 export interface ChartDataPoint {
   [key: string]: string | number;
@@ -43,20 +44,7 @@ export interface DataMapping {
   value?: string;
 }
 
-/**
- * Default color palette for charts (unified across all chart types)
- * Must match the palette used in chart components for consistency
- */
-const COLORS = [
-  '#3b82f6', // blue
-  '#ef4444', // red
-  '#10b981', // green
-  '#f59e0b', // amber
-  '#8b5cf6', // purple
-  '#ec4899', // pink
-  '#14b8a6', // teal
-  '#f97316', // orange
-];
+// Use shared color palette (imported from chart-colors.ts)
 
 /**
  * Transform time-series data for Area/Line chart
@@ -130,7 +118,7 @@ export function transformTimeSeriesData(pattern: DataPattern, dataMapping?: Data
   const lines = valueKeys.map((key, idx) => ({
     name: key.charAt(0).toUpperCase() + key.slice(1),
     key,
-    stroke: COLORS[idx % COLORS.length],
+    stroke: CHART_COLORS[idx % CHART_COLORS.length],
   }));
 
   return {
@@ -209,7 +197,7 @@ export function transformComparisonData(pattern: DataPattern, dataMapping?: Data
   const bars = valueKeys.map((key, idx) => ({
     name: key.charAt(0).toUpperCase() + key.slice(1),
     key,
-    fill: COLORS[idx % COLORS.length],
+    fill: CHART_COLORS[idx % CHART_COLORS.length],
   }));
 
   return {

@@ -165,6 +165,8 @@ function extractMarkdownTables(
 
 /**
  * Checks if data is a valid time-series
+ * A true timeseries has a time/date field that serves as the PRIMARY x-axis
+ * (not metadata like releaseDate on items)
  */
 function isTimeSeries(data: any): boolean {
   if (!data || typeof data !== 'object') {
@@ -178,7 +180,7 @@ function isTimeSeries(data: any): boolean {
   }
 
   // Look for time-related keys with numeric values
-  const hasTimeKey = keys.some(
+  const timeKeys = keys.filter(
     (k) =>
       k.toLowerCase().includes('time') ||
       k.toLowerCase().includes('date') ||
@@ -188,15 +190,49 @@ function isTimeSeries(data: any): boolean {
       k.toLowerCase().includes('month')
   );
 
+  const hasTimeKey = timeKeys.length > 0;
+
   // Check if values contain numeric sequences
-  const hasNumericValues = keys.some((k) => {
+  const numericKeys = keys.filter((k) => {
     const value = data[k];
     const isNumArray = Array.isArray(value) && value.length > 0 && value.every((v) => typeof v === 'number');
     return isNumArray;
   });
 
+  const hasNumericValues = numericKeys.length > 0;
 
-  return hasTimeKey || (hasNumericValues && keys.length <= 5);
+  // Check for categorical/text fields (indicators of comparison data, not timeseries)
+  const categoricalKeys = keys.filter((k) => {
+    const value = data[k];
+    // String values or string arrays indicate categories
+    if (typeof value === 'string') return true;
+    if (Array.isArray(value) && value.length > 0 && value.every((v) => typeof v === 'string')) {
+      return true;
+    }
+    return false;
+  });
+
+  const hasCategorical = categoricalKeys.length > 0;
+
+  // HEURISTIC: If we have categorical data (text fields like titles, names)
+  // alongside a date field, it's NOT a timeseries - it's a comparison
+  // Example: movies with releaseDate, title, rating = comparison, not timeseries
+  if (hasCategorical && hasTimeKey) {
+    // Only consider it timeseries if the time field is the ONLY non-numeric field
+    const nonNumericKeys = keys.filter((k) => {
+      const value = data[k];
+      return !Array.isArray(value) || !value.every((v) => typeof v === 'number');
+    });
+
+    // If we have more than just the time key as non-numeric, it's comparison data
+    if (nonNumericKeys.length > timeKeys.length) {
+      return false;
+    }
+  }
+
+  // True timeseries: has time key and numeric values, no categorical data
+  return (hasTimeKey && hasNumericValues && !hasCategorical) ||
+         (hasNumericValues && keys.length <= 3); // Small datasets with pure numeric data
 }
 
 /**

@@ -10,23 +10,12 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 
 import { ComparisonData } from '@/lib/visualization/chart-transformer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart';
+import { CHART_COLORS } from '@/lib/visualization/chart-colors';
 
 interface BarChartProps {
   data: ComparisonData;
   title?: string;
 }
-
-// Color palette for chart bars
-const CHART_COLORS = [
-  '#3b82f6', // blue
-  '#ef4444', // red
-  '#10b981', // green
-  '#f59e0b', // amber
-  '#8b5cf6', // purple
-  '#ec4899', // pink
-  '#14b8a6', // teal
-  '#f97316', // orange
-];
 
 export function BarChartComponent({ data, title }: BarChartProps) {
   if (!data.data || data.data.length === 0) {

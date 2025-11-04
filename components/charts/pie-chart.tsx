@@ -9,17 +9,7 @@
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
 import { DistributionData } from '@/lib/visualization/chart-transformer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-const COLORS = [
-  '#3b82f6', // blue
-  '#ef4444', // red
-  '#10b981', // green
-  '#f59e0b', // amber
-  '#8b5cf6', // purple
-  '#ec4899', // pink
-  '#06b6d4', // cyan
-  '#14b8a6', // teal
-];
+import { CHART_COLORS } from '@/lib/visualization/chart-colors';
 
 interface PieChartProps {
   data: DistributionData;
@@ -56,8 +46,8 @@ export function PieChartComponent({ data, title, height = 300, variant = 'donut'
                 label={(entry) => `${entry[data.nameKey]}: ${entry[data.dataKey]}`}
                 isAnimationActive={true}
               >
-                {data.data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                {data.data.map((_, index) => (
+                  <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip
