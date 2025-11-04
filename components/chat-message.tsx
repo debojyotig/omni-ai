@@ -10,7 +10,6 @@
 
 'use client';
 
-import * as React from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -119,7 +118,7 @@ export function ChatMessage({ role, content, isStreaming = false }: ChatMessageP
                       return (
                         <a
                           href={href}
-                          className="text-primary underline underline-offset-4 hover:text-primary/80 transition-colors"
+                          className="text-primary underline underline-offset-4 hover:text-primary/80 transition-colors font-medium"
                           target="_blank"
                           rel="noopener noreferrer"
                         >
