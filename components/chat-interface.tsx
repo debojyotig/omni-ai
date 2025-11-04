@@ -71,18 +71,13 @@ export function ChatInterface() {
   }, [clearSteps, createConversation]);
 
   // Clear activity and streaming state when switching conversations
+  // NOTE: We do NOT abort the request - it continues in background and completes when switched back
   useEffect(() => {
     if (activeConversationId) {
       // Clear streaming state from previous conversation
       setStreamingContent('');
 
-      // Abort any in-flight request
-      if (abortController) {
-        abortController.abort();
-        setAbortController(null);
-      }
-
-      // Reset loading state
+      // Reset loading state (visual indicator)
       setIsLoading(false);
 
       // Clear activity steps and close panel for new conversation
@@ -118,6 +113,9 @@ export function ChatInterface() {
   const handleSend = async () => {
     if (!input.trim() || isLoading || !activeConversationId) return;
 
+    // Capture conversation ID at send time - CRITICAL: must stay fixed for entire request
+    const messageConversationId = activeConversationId;
+
     const userMessage = {
       id: crypto.randomUUID(),
       role: 'user' as const,
@@ -125,7 +123,7 @@ export function ChatInterface() {
       timestamp: Date.now(),
     };
 
-    addMessage(activeConversationId, userMessage);
+    addMessage(messageConversationId, userMessage);
     const currentInput = input;
     setInput('');
     setIsLoading(true);
@@ -135,7 +133,7 @@ export function ChatInterface() {
 
     // Clear previous activity steps, set thread ID, and open activity panel
     clearSteps();
-    setThreadId(activeConversationId);
+    setThreadId(messageConversationId);
     toolStepsRef.current.clear();
     const { setOpen } = useActivityStore.getState();
     setOpen(true); // Auto-open activity panel for new messages
@@ -171,7 +169,7 @@ export function ChatInterface() {
         body: JSON.stringify({
           message: currentInput,
           agent: selectedAgent,
-          threadId: activeConversationId, // Use conversation ID as thread ID
+          threadId: messageConversationId, // Use captured conversation ID as thread ID
           resourceId: 'default-user', // User identifier (can be enhanced later)
         }),
         signal: controller.signal,
@@ -324,14 +322,14 @@ export function ChatInterface() {
 
       // Add final assistant message with accumulated text
       const finalText = parser.getAccumulatedText();
-      if (finalText && activeConversationId) {
+      if (finalText && messageConversationId) {
         const assistantMessage = {
           id: crypto.randomUUID(),
           role: 'assistant' as const,
           content: finalText,
           timestamp: Date.now(),
         };
-        addMessage(activeConversationId, assistantMessage);
+        addMessage(messageConversationId, assistantMessage);
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {
