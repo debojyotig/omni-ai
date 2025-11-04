@@ -137,8 +137,10 @@ export function ChatInterface() {
     };
 
     addMessage(messageConversationId, userMessage);
-    // Sync user message to database
-    syncAddMessage(messageConversationId, userMessage, 'default-user');
+    // Sync user message to database (fire and forget)
+    syncAddMessage(messageConversationId, userMessage, 'default-user').catch(err => {
+      console.error('[ChatInterface] Failed to sync user message:', err)
+    });
 
     const currentInput = input;
     setInput('');
@@ -346,8 +348,10 @@ export function ChatInterface() {
           timestamp: Date.now(),
         };
         addMessage(messageConversationId, assistantMessage);
-        // Sync assistant message to database
-        syncAddMessage(messageConversationId, assistantMessage, 'default-user');
+        // Sync assistant message to database (fire and forget)
+        syncAddMessage(messageConversationId, assistantMessage, 'default-user').catch(err => {
+          console.error('[ChatInterface] Failed to sync assistant message:', err)
+        });
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {

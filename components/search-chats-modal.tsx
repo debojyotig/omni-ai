@@ -19,7 +19,7 @@ interface SearchChatsModalProps {
 
 export function SearchChatsModal({ open, onOpenChange }: SearchChatsModalProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const { conversations, activeConversationId, setActiveConversation, createConversation } = useConversationStore()
+  const { conversations, activeConversationId, setActiveConversation, createConversation, syncCreateConversation } = useConversationStore()
 
   const formatTimestamp = (timestamp: number) => {
     const now = Date.now()
@@ -74,9 +74,15 @@ export function SearchChatsModal({ open, onOpenChange }: SearchChatsModalProps) 
             <Button
               variant="ghost"
               className="w-full justify-start gap-2 text-left"
-              onClick={() => {
+              onClick={async () => {
                 const id = createConversation()
                 setActiveConversation(id)
+                // Sync to database
+                const state = useConversationStore.getState() as any
+                const newConversation = state.conversations.find((c: any) => c.id === id)
+                if (newConversation) {
+                  await syncCreateConversation(id, newConversation.title, 'default-user')
+                }
                 onOpenChange(false)
               }}
             >

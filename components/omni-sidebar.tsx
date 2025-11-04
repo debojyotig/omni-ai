@@ -31,12 +31,24 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
     createConversation,
     setActiveConversation,
     deleteConversation,
+    syncCreateConversation,
   } = useConversationStore()
 
   // Sort conversations by updated date (most recent first)
   const sortedConversations = React.useMemo(() => {
     return [...conversations].sort((a, b) => b.updatedAt - a.updatedAt)
   }, [conversations])
+
+  const handleNewConversation = async () => {
+    setActiveView("chat")
+    const newId = createConversation()
+    // Sync to database
+    const state = useConversationStore.getState() as any
+    const newConversation = state.conversations.find((c: any) => c.id === newId)
+    if (newConversation) {
+      await syncCreateConversation(newId, newConversation.title, 'default-user')
+    }
+  }
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -63,10 +75,7 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
             variant="ghost"
             size={state === "collapsed" ? "icon" : "default"}
             className={`${state === "collapsed" ? "h-10 w-10" : "w-full justify-start"} pointer-events-auto`}
-            onClick={() => {
-              setActiveView("chat")
-              createConversation()
-            }}
+            onClick={handleNewConversation}
             title="New conversation"
           >
             <Plus className="size-4" />

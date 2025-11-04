@@ -22,16 +22,26 @@ export function ConversationSidebar() {
     createConversation,
     setActiveConversation,
     deleteConversation,
+    syncCreateConversation,
+    syncDeleteConversation,
   } = useConversationStore()
 
-  const handleNewConversation = () => {
-    createConversation()
+  const handleNewConversation = async () => {
+    const newId = createConversation()
+    // Sync to database
+    const state = useConversationStore.getState() as any
+    const newConversation = state.conversations.find((c: any) => c.id === newId)
+    if (newConversation) {
+      await syncCreateConversation(newId, newConversation.title, 'default-user')
+    }
   }
 
-  const handleDeleteConversation = (e: React.MouseEvent, id: string) => {
+  const handleDeleteConversation = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
     if (confirm('Delete this conversation?')) {
       deleteConversation(id)
+      // Sync deletion to database
+      await syncDeleteConversation(id, 'default-user')
     }
   }
 
