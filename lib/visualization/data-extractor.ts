@@ -238,6 +238,61 @@ function extractTimeSeriesFromText(content: string): DataPattern | null {
 }
 
 /**
+ * Extracts comparison data from lines with name/category and numeric values
+ * Handles formats like:
+ * - "Movie Name  240.35"
+ * - "Chainsaw Man: Reze Arc  240.35"
+ * - "Category |---- 100 items"
+ */
+function extractComparisonFromLines(content: string): DataPattern | null {
+  const lines = content.split('\n').filter((l) => l.trim().length > 0);
+
+  // Look for lines with a name/label and a trailing number
+  // Must have at least 2 columns of space separation
+  const labels: string[] = [];
+  const values: number[] = [];
+
+  for (const line of lines) {
+    // Skip lines that are headers or separators
+    if (line.includes('---') || line.includes('===') || line.includes('|---')) {
+      continue;
+    }
+
+    // Try to match: "Name/Label" + whitespace + number
+    // This regex looks for text followed by 2+ spaces and then a number
+    const match = line.match(/^(.{3,}?)\s{2,}([\d,.-]+)$/);
+    if (match) {
+      const label = match[1].trim();
+      const value = parseFloat(match[2].replace(/,/g, ''));
+
+      if (!isNaN(value) && label.length > 0) {
+        labels.push(label);
+        values.push(value);
+      }
+    }
+  }
+
+  // Need at least 2 data points
+  if (labels.length < 2) return null;
+
+  // Transform to arrays format that transformComparisonData expects
+  const comparisonData = {
+    category: labels,
+    value: values,
+  };
+
+  return {
+    type: 'comparison',
+    confidence: 0.8,
+    data: comparisonData,
+    metadata: {
+      title: 'Comparison Data',
+      description: 'Extracted from formatted lines',
+    },
+  };
+}
+
+/**
  * Extracts key-value data from plain text
  * Example: "Error Rate: 5.2%, Success Rate: 94.8%"
  */
@@ -472,12 +527,22 @@ export function convertTableToTimeSeries(headers: string[], rows: string[][]): D
 /**
  * Main extraction function - prioritizes Recharts visualizations
  * Tries multiple strategies in order of preference:
- * 1. Key-value pairs (for comparison/distribution charts)
- * 2. Time-series extraction from text
- * 3. Plain text tables (converted to time-series if applicable)
+ * 1. Comparison lines (name/label + value format - highest confidence)
+ * 2. Key-value pairs (for comparison/distribution charts)
+ * 3. Time-series extraction from text
+ * 4. Plain text tables (converted to time-series if applicable)
  */
 export function extractStructuredData(content: string): DataPattern | null {
-  // Strategy 1: Try key-value extraction (often reveals comparison data)
+  // Strategy 1: Try comparison extraction from formatted lines (highest specificity)
+  const comparisonData = extractComparisonFromLines(content);
+  if (comparisonData) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[DataExtractor] Extracted comparison data from lines');
+    }
+    return comparisonData;
+  }
+
+  // Strategy 2: Try key-value extraction (often reveals comparison data)
   const kvData = extractKeyValueData(content);
   if (kvData) {
     if (process.env.NODE_ENV === 'development') {
@@ -486,7 +551,7 @@ export function extractStructuredData(content: string): DataPattern | null {
     return kvData;
   }
 
-  // Strategy 2: Try time-series extraction
+  // Strategy 3: Try time-series extraction
   const timeSeriesData = extractTimeSeriesFromText(content);
   if (timeSeriesData) {
     if (process.env.NODE_ENV === 'development') {
@@ -495,7 +560,7 @@ export function extractStructuredData(content: string): DataPattern | null {
     return timeSeriesData;
   }
 
-  // Strategy 3: Try plain text table (and convert to chart if possible)
+  // Strategy 4: Try plain text table (and convert to chart if possible)
   const tableData = extractPlainTextTable(content);
   if (tableData && tableData.data.headers && tableData.data.rows) {
     if (process.env.NODE_ENV === 'development') {
