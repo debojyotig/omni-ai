@@ -17,52 +17,138 @@ function isTableSeparator(line: string): boolean {
 }
 
 /**
+ * Detects column boundaries in fixed-width tables
+ * Looks for gaps of 2+ spaces to identify column positions
+ */
+function detectColumnBoundaries(lines: string[]): number[] {
+  const boundaries: Set<number> = new Set();
+
+  // Analyze all non-separator lines to find column breaks
+  for (const line of lines) {
+    if (isTableSeparator(line)) continue;
+
+    let inSpace = false;
+    for (let i = 0; i < line.length; i++) {
+      const isSpace = /\s/.test(line[i]);
+
+      if (isSpace && !inSpace) {
+        inSpace = true;
+        // Mark potential boundary start
+        if (i > 0 && i < line.length - 1) {
+          boundaries.add(i);
+        }
+      } else if (!isSpace && inSpace) {
+        inSpace = false;
+        // Mark potential boundary end
+        if (i > 0) {
+          boundaries.add(i);
+        }
+      }
+    }
+  }
+
+  return Array.from(boundaries).sort((a, b) => a - b);
+}
+
+/**
+ * Extracts columns from a line using detected column boundaries
+ */
+function extractCellsByBoundaries(line: string, boundaries: number[]): string[] {
+  if (boundaries.length === 0) {
+    return [line.trim()];
+  }
+
+  const cells: string[] = [];
+  let lastBoundary = 0;
+
+  for (const boundary of boundaries) {
+    if (boundary > lastBoundary + 1) {
+      const cell = line.substring(lastBoundary, boundary).trim();
+      if (cell.length > 0) {
+        cells.push(cell);
+      }
+    }
+    lastBoundary = boundary;
+  }
+
+  // Add final cell
+  if (lastBoundary < line.length) {
+    const cell = line.substring(lastBoundary).trim();
+    if (cell.length > 0) {
+      cells.push(cell);
+    }
+  }
+
+  return cells;
+}
+
+/**
  * Extracts whitespace-aligned table from plain text
- * Simplified approach: split by 2+ whitespace
+ * Uses fixed-width column detection and handles variable spacing
  * Example:
  * Date       Price   Change
  * Oct 28     100.5   +2%
  * Oct 29     102.1   +1.6%
  */
 function extractPlainTextTable(content: string): DataPattern | null {
-  const lines = content.split('\n').map((l) => l.trim()).filter((l) => l);
+  const lines = content.split('\n');
+  const nonEmptyLines = lines.filter((l) => l.trim().length > 0);
 
-  if (lines.length < 3) return null;
+  if (nonEmptyLines.length < 3) return null;
 
-  // Extract headers from first line
-  const headerLine = lines[0];
-  const headerParts = headerLine
+  // First try: 2+ space delimiter (most common)
+  const headerLine = nonEmptyLines[0];
+  let headerParts = headerLine
     .split(/\s{2,}/)
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
+
+  // If only 1 column, try fixed-width detection
+  if (headerParts.length < 2) {
+    const boundaries = detectColumnBoundaries(nonEmptyLines);
+    if (boundaries.length > 1) {
+      headerParts = extractCellsByBoundaries(headerLine, boundaries);
+    }
+  }
 
   // Need at least 2 columns
   if (headerParts.length < 2) return null;
 
   // Extract data rows
   const rows: string[][] = [];
+  let useBoundaries = false;
+  let boundaries: number[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
+  // Detect if we should use boundaries for data extraction
+  if (headerParts.length === 1 || nonEmptyLines.length > 1) {
+    boundaries = detectColumnBoundaries(nonEmptyLines);
+    useBoundaries = boundaries.length > 1 && boundaries.length >= headerParts.length - 1;
+  }
 
-    // Skip separator lines (dashes, pipes)
+  for (let i = 1; i < nonEmptyLines.length; i++) {
+    const line = nonEmptyLines[i];
+
+    // Skip separator lines
     if (isTableSeparator(line)) continue;
 
-    // Split by 2+ spaces (standard table alignment)
-    const cells = line
-      .split(/\s{2,}/)
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
+    // Extract cells using appropriate method
+    let cells: string[];
+    if (useBoundaries && boundaries.length > 0) {
+      cells = extractCellsByBoundaries(line, boundaries);
+    } else {
+      cells = line
+        .split(/\s{2,}/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+    }
 
-    // Validate row structure
-    // Allow ±1 flexibility for ragged columns
+    // Validate row structure - allow some flexibility for ragged tables
     const expectedCells = headerParts.length;
-    if (cells.length < expectedCells - 1 || cells.length > expectedCells + 2) {
-      // Row doesn't match header structure, skip it
+    if (cells.length === 0 || cells.length > expectedCells + 2) {
       continue;
     }
 
-    // Pad or trim to match header count
+    // Pad to match header count
     while (cells.length < expectedCells) {
       cells.push('');
     }
@@ -73,8 +159,8 @@ function extractPlainTextTable(content: string): DataPattern | null {
     rows.push(cells);
   }
 
-  // Need at least 2 data rows to be a valid table
-  if (rows.length < 2) return null;
+  // Need at least 1 data row to be a valid table
+  if (rows.length < 1) return null;
 
   return {
     type: 'table',
