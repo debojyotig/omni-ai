@@ -199,6 +199,7 @@ export async function POST(req: NextRequest) {
     const result = query({
       prompt: message,
       options: {
+        ...(modelId && { model: modelId }), // Use selected model if provided
         resume: sessionId || undefined, // Resume existing conversation or undefined for new
         systemPrompt: agentConfig.systemPrompt,
         agents: agentConfig.agents,
