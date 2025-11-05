@@ -1,80 +1,90 @@
 /**
  * Server-Side Provider Configuration for Claude Agent SDK
  *
- * Supports multi-LLM via enterprise OAuth2 gateway using ANTHROPIC_BASE_URL.
- * Provider selection requires app restart (no runtime switching).
+ * Supports runtime model switching with native third-party provider support:
+ * - Anthropic: Direct API via ANTHROPIC_API_KEY
+ * - AWS Bedrock: Native support via CLAUDE_CODE_USE_BEDROCK=1 + AWS credentials
+ * - GCP Vertex AI: Native support via CLAUDE_CODE_USE_VERTEX=1 + GCP credentials
+ * - Azure OpenAI: Via gateway using ANTHROPIC_BASE_URL
  *
- * Architecture:
- * omni-ai → ANTHROPIC_BASE_URL → Enterprise Gateway → Azure/AWS/GCP
+ * The Claude Agent SDK automatically detects environment variables and uses
+ * the appropriate provider at runtime.
  */
 
 export interface ProviderConfig {
   provider: string
-  baseURL?: string
   apiKey: string
+  baseURL?: string
+  awsRegion?: string
+  gcpProjectId?: string
   models: string[]
 }
 
-export type ProviderId = 'anthropic' | 'azure' | 'aws' | 'gcp'
+export type ProviderId = 'anthropic' | 'bedrock' | 'vertex' | 'azure-openai'
 
 /**
  * Get current provider configuration from environment variables
+ *
+ * Runtime Provider Switching:
+ * - Anthropic: Uses ANTHROPIC_API_KEY directly (default)
+ * - Bedrock: Set CLAUDE_CODE_USE_BEDROCK=1 + AWS credentials
+ * - Vertex: Set CLAUDE_CODE_USE_VERTEX=1 + GCP credentials
+ * - Azure: Set ANTHROPIC_BASE_URL + Azure Gateway credentials
  */
 export function getProviderConfig(): ProviderConfig {
-  const selectedProvider = (process.env.SELECTED_PROVIDER || 'anthropic') as ProviderId
+  // Check for native third-party provider indicators
+  if (process.env.CLAUDE_CODE_USE_BEDROCK === '1') {
+    return {
+      provider: 'bedrock',
+      apiKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+      awsRegion: process.env.AWS_REGION || 'us-east-1',
+      models: [
+        'anthropic.claude-3-5-sonnet-20241022-v2:0',
+        'anthropic.claude-3-opus-20240229-v1:0',
+        'anthropic.claude-3-haiku-20240307-v1:0'
+      ]
+    }
+  }
 
-  switch (selectedProvider) {
-    case 'azure':
-      return {
-        provider: 'azure',
-        baseURL: process.env.AZURE_GATEWAY_URL,
-        apiKey: process.env.AZURE_CLIENT_SECRET || '',
-        models: [
-          'claude-sonnet-4-5-20250929',
-          'claude-opus-4-1-20250805',
-          'claude-haiku-4-5-20251001'
-        ]
-      }
+  if (process.env.CLAUDE_CODE_USE_VERTEX === '1') {
+    return {
+      provider: 'vertex',
+      apiKey: process.env.GCP_SERVICE_ACCOUNT_KEY || '',
+      gcpProjectId: process.env.GCP_PROJECT_ID,
+      models: [
+        'claude-3-5-sonnet@20241022',
+        'claude-3-opus@20240229',
+        'claude-3-haiku@20240307'
+      ]
+    }
+  }
 
-    case 'aws':
-      return {
-        provider: 'aws',
-        baseURL: process.env.AWS_GATEWAY_URL,
-        apiKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-        models: [
-          'claude-sonnet-4-5-20250929',
-          'claude-opus-4-1-20250805',
-          'claude-haiku-4-5-20251001'
-        ]
-      }
+  // Check for Azure gateway
+  if (process.env.ANTHROPIC_BASE_URL && process.env.ANTHROPIC_BASE_URL.includes('azure')) {
+    return {
+      provider: 'azure-openai',
+      apiKey: process.env.ANTHROPIC_API_KEY || '',
+      baseURL: process.env.ANTHROPIC_BASE_URL,
+      models: [
+        'claude-sonnet-4-5-20250929',
+        'claude-opus-4-1-20250805',
+        'claude-haiku-4-5-20251001'
+      ]
+    }
+  }
 
-    case 'gcp':
-      return {
-        provider: 'gcp',
-        baseURL: process.env.GCP_GATEWAY_URL,
-        apiKey: process.env.GCP_SERVICE_ACCOUNT_KEY || '',
-        models: [
-          'claude-sonnet-4-5-20250929',
-          'claude-opus-4-1-20250805',
-          'claude-haiku-4-5-20251001'
-        ]
-      }
-
-    case 'anthropic':
-    default:
-      return {
-        provider: 'anthropic',
-        baseURL: undefined, // Use default Anthropic API
-        apiKey: process.env.ANTHROPIC_API_KEY || '',
-        models: [
-          'claude-sonnet-4-5-20250929',
-          'claude-opus-4-1-20250805',
-          'claude-haiku-4-5-20251001',
-          'claude-3-7-sonnet-20250219',
-          'claude-3-opus-20240229',
-          'claude-3-haiku-20240307'
-        ]
-      }
+  // Default: Anthropic Direct API
+  return {
+    provider: 'anthropic',
+    apiKey: process.env.ANTHROPIC_API_KEY || '',
+    models: [
+      'claude-sonnet-4-5-20250929',
+      'claude-opus-4-1-20250805',
+      'claude-haiku-4-5-20251001',
+      'claude-3-7-sonnet-20250219',
+      'claude-3-opus-20240229',
+      'claude-3-haiku-20240307'
+    ]
   }
 }
 
@@ -97,16 +107,16 @@ export function getAnthropicConfig(): {
  * Get current provider name for display
  */
 export function getCurrentProviderName(): string {
-  const selectedProvider = process.env.SELECTED_PROVIDER || 'anthropic'
+  const config = getProviderConfig()
 
   const providerNames: Record<string, string> = {
-    anthropic: 'Anthropic (Direct)',
-    azure: 'Azure OpenAI (via Gateway)',
-    aws: 'AWS Bedrock (via Gateway)',
-    gcp: 'GCP Vertex AI (via Gateway)'
+    anthropic: 'Anthropic (Direct API)',
+    bedrock: 'AWS Bedrock',
+    vertex: 'GCP Vertex AI',
+    'azure-openai': 'Azure OpenAI (Gateway)'
   }
 
-  return providerNames[selectedProvider] || 'Unknown Provider'
+  return providerNames[config.provider] || 'Unknown Provider'
 }
 
 /**
@@ -120,32 +130,31 @@ export function getAvailableProvidersList(): Array<{
   return [
     {
       id: 'anthropic',
-      name: 'Anthropic (Direct)',
+      name: 'Anthropic (Direct API)',
       configured: !!process.env.ANTHROPIC_API_KEY
     },
     {
-      id: 'azure',
-      name: 'Azure OpenAI (via Gateway)',
+      id: 'bedrock',
+      name: 'AWS Bedrock',
       configured:
-        !!process.env.AZURE_GATEWAY_URL &&
-        !!process.env.AZURE_CLIENT_ID &&
-        !!process.env.AZURE_CLIENT_SECRET
-    },
-    {
-      id: 'aws',
-      name: 'AWS Bedrock (via Gateway)',
-      configured:
-        !!process.env.AWS_GATEWAY_URL &&
+        !!process.env.AWS_REGION &&
         !!process.env.AWS_ACCESS_KEY_ID &&
         !!process.env.AWS_SECRET_ACCESS_KEY
     },
     {
-      id: 'gcp',
-      name: 'GCP Vertex AI (via Gateway)',
+      id: 'vertex',
+      name: 'GCP Vertex AI',
       configured:
-        !!process.env.GCP_GATEWAY_URL &&
         !!process.env.GCP_PROJECT_ID &&
         !!process.env.GCP_SERVICE_ACCOUNT_KEY
+    },
+    {
+      id: 'azure-openai',
+      name: 'Azure OpenAI (Gateway)',
+      configured:
+        !!process.env.ANTHROPIC_BASE_URL &&
+        !!process.env.ANTHROPIC_API_KEY &&
+        process.env.ANTHROPIC_BASE_URL.includes('azure')
     }
   ]
 }
@@ -160,14 +169,24 @@ export function validateProviderConfig(): {
   const config = getProviderConfig()
   const errors: string[] = []
 
-  // Check if API key is set
+  // All providers need API key
   if (!config.apiKey) {
     errors.push(`Missing API key for provider: ${config.provider}`)
   }
 
-  // Check if gateway URL is set for non-Anthropic providers
-  if (config.provider !== 'anthropic' && !config.baseURL) {
-    errors.push(`Missing gateway URL for provider: ${config.provider}`)
+  // AWS Bedrock needs AWS region
+  if (config.provider === 'bedrock' && !config.awsRegion) {
+    errors.push('Missing AWS_REGION for Bedrock')
+  }
+
+  // GCP Vertex needs project ID
+  if (config.provider === 'vertex' && !config.gcpProjectId) {
+    errors.push('Missing GCP_PROJECT_ID for Vertex AI')
+  }
+
+  // Azure OpenAI needs base URL
+  if (config.provider === 'azure-openai' && !config.baseURL) {
+    errors.push('Missing ANTHROPIC_BASE_URL for Azure OpenAI')
   }
 
   return {

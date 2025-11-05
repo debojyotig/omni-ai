@@ -15,13 +15,18 @@ export interface ModelConfig {
 export interface ProviderInfo {
   id: string
   name: string
-  type: 'standard' | 'oauth2'
+  type: 'standard' | 'native' | 'gateway'
   requiresAuth: boolean
   envVars: string[]
 }
 
 /**
  * Available providers metadata
+ *
+ * Types:
+ * - standard: Mastra built-in providers (OpenAI, Anthropic)
+ * - native: Claude Agent SDK native support (Bedrock, Vertex)
+ * - gateway: Enterprise gateway via ANTHROPIC_BASE_URL (Azure)
  */
 export const PROVIDERS: Record<string, ProviderInfo> = {
   openai: {
@@ -38,40 +43,35 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
     requiresAuth: true,
     envVars: ['ANTHROPIC_API_KEY']
   },
+  bedrock: {
+    id: 'bedrock',
+    name: 'AWS Bedrock',
+    type: 'native',
+    requiresAuth: true,
+    envVars: [
+      'AWS_REGION',
+      'AWS_ACCESS_KEY_ID',
+      'AWS_SECRET_ACCESS_KEY'
+    ]
+  },
+  vertex: {
+    id: 'vertex',
+    name: 'GCP Vertex AI',
+    type: 'native',
+    requiresAuth: true,
+    envVars: [
+      'GCP_PROJECT_ID',
+      'GCP_SERVICE_ACCOUNT_KEY'
+    ]
+  },
   'azure-openai': {
     id: 'azure-openai',
     name: 'Azure OpenAI',
-    type: 'oauth2',
+    type: 'gateway',
     requiresAuth: true,
     envVars: [
-      'AZURE_OPENAI_ENDPOINT',
-      'AZURE_TOKEN_ENDPOINT',
-      'AZURE_CLIENT_ID',
-      'AZURE_CLIENT_SECRET'
-    ]
-  },
-  'aws-bedrock': {
-    id: 'aws-bedrock',
-    name: 'AWS Bedrock',
-    type: 'oauth2',
-    requiresAuth: true,
-    envVars: [
-      'AWS_BEDROCK_ENDPOINT',
-      'AWS_TOKEN_ENDPOINT',
-      'AWS_CLIENT_ID',
-      'AWS_CLIENT_SECRET'
-    ]
-  },
-  'gcp-vertex': {
-    id: 'gcp-vertex',
-    name: 'GCP Vertex AI',
-    type: 'oauth2',
-    requiresAuth: true,
-    envVars: [
-      'GCP_VERTEX_ENDPOINT',
-      'GCP_TOKEN_ENDPOINT',
-      'GCP_CLIENT_ID',
-      'GCP_CLIENT_SECRET'
+      'ANTHROPIC_BASE_URL',
+      'ANTHROPIC_API_KEY'
     ]
   }
 }
@@ -123,6 +123,46 @@ export const MODELS: Record<string, ModelConfig[]> = {
       maxTokens: 200000
     }
   ],
+  bedrock: [
+    {
+      id: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
+      name: 'Claude 3.5 Sonnet (Bedrock)',
+      provider: 'bedrock',
+      maxTokens: 200000
+    },
+    {
+      id: 'anthropic.claude-3-opus-20240229-v1:0',
+      name: 'Claude 3 Opus (Bedrock)',
+      provider: 'bedrock',
+      maxTokens: 200000
+    },
+    {
+      id: 'anthropic.claude-3-haiku-20240307-v1:0',
+      name: 'Claude 3 Haiku (Bedrock)',
+      provider: 'bedrock',
+      maxTokens: 200000
+    }
+  ],
+  vertex: [
+    {
+      id: 'claude-3-5-sonnet@20241022',
+      name: 'Claude 3.5 Sonnet (Vertex)',
+      provider: 'vertex',
+      maxTokens: 200000
+    },
+    {
+      id: 'claude-3-opus@20240229',
+      name: 'Claude 3 Opus (Vertex)',
+      provider: 'vertex',
+      maxTokens: 200000
+    },
+    {
+      id: 'claude-3-haiku@20240307',
+      name: 'Claude 3 Haiku (Vertex)',
+      provider: 'vertex',
+      maxTokens: 200000
+    }
+  ],
   'azure-openai': [
     {
       id: 'gpt-4-turbo',
@@ -136,34 +176,6 @@ export const MODELS: Record<string, ModelConfig[]> = {
       name: 'GPT-3.5 Turbo (Azure)',
       provider: 'azure-openai',
       maxTokens: 16385
-    }
-  ],
-  'aws-bedrock': [
-    {
-      id: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
-      name: 'Claude 3.5 Sonnet (Bedrock)',
-      provider: 'aws-bedrock',
-      maxTokens: 200000
-    },
-    {
-      id: 'anthropic.claude-3-haiku-20240307-v1:0',
-      name: 'Claude 3 Haiku (Bedrock)',
-      provider: 'aws-bedrock',
-      maxTokens: 200000
-    }
-  ],
-  'gcp-vertex': [
-    {
-      id: 'claude-3-5-sonnet@20241022',
-      name: 'Claude 3.5 Sonnet (Vertex)',
-      provider: 'gcp-vertex',
-      maxTokens: 200000
-    },
-    {
-      id: 'claude-3-haiku@20240307',
-      name: 'Claude 3 Haiku (Vertex)',
-      provider: 'gcp-vertex',
-      maxTokens: 200000
     }
   ]
 }

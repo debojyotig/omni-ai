@@ -65,15 +65,23 @@ const DEFAULT_SETTINGS: Record<string, RuntimeSettings> = {
 
 /**
  * Get default settings based on model name
+ *
+ * Matches model patterns from all providers:
+ * - Anthropic Direct: claude-sonnet-4-5-20250929, claude-opus-4-1-20250805, claude-haiku-4-5-20251001
+ * - AWS Bedrock: anthropic.claude-3-5-sonnet-20241022-v2:0, anthropic.claude-3-opus-20240229-v1:0
+ * - GCP Vertex: claude-3-5-sonnet@20241022, claude-3-opus@20240229
+ * - OpenAI: gpt-4-turbo, gpt-4, gpt-3.5-turbo
  */
 function getDefaultSettingsForModel(modelId: string): RuntimeSettings {
-  // Match by model name patterns
-  if (modelId.includes('haiku')) return DEFAULT_SETTINGS.haiku
-  if (modelId.includes('opus')) return DEFAULT_SETTINGS.opus
-  if (modelId.includes('sonnet')) return DEFAULT_SETTINGS.sonnet
-  if (modelId.includes('gpt-4-turbo')) return DEFAULT_SETTINGS['gpt-4-turbo']
-  if (modelId.includes('gpt-4')) return DEFAULT_SETTINGS['gpt-4']
-  if (modelId.includes('gpt-3.5')) return DEFAULT_SETTINGS['gpt-3.5']
+  // Match by model name patterns (case-insensitive for flexibility)
+  const lowerModelId = modelId.toLowerCase()
+
+  if (lowerModelId.includes('haiku')) return DEFAULT_SETTINGS.haiku
+  if (lowerModelId.includes('opus')) return DEFAULT_SETTINGS.opus
+  if (lowerModelId.includes('sonnet')) return DEFAULT_SETTINGS.sonnet
+  if (lowerModelId.includes('gpt-4-turbo')) return DEFAULT_SETTINGS['gpt-4-turbo']
+  if (lowerModelId.includes('gpt-4')) return DEFAULT_SETTINGS['gpt-4']
+  if (lowerModelId.includes('gpt-3.5')) return DEFAULT_SETTINGS['gpt-3.5']
 
   // Default fallback
   return DEFAULT_SETTINGS.sonnet

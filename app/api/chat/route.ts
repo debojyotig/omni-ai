@@ -12,9 +12,11 @@ import { subAgentConfigs } from '@/lib/agents/subagent-configs';
 import { withHallucinationReduction } from '@/lib/agents/hallucination-reduction';
 import { getSystemPromptWithStandardization } from '@/lib/agents/standardized-response-format';
 import { getAnthropicConfig } from '@/lib/config/server-provider-config';
+import { configureProviderForSDK, validateProviderEnvironment } from '@/lib/config/runtime-provider-switch';
 import { getSessionStore } from '@/lib/session/simple-session-store';
 import type { AgentType } from '@/lib/stores/agent-store';
 import type { RuntimeSettings } from '@/lib/stores/provider-store';
+import type { ProviderId } from '@/lib/config/server-provider-config';
 
 /**
  * Master Orchestrator Instructions
@@ -131,7 +133,24 @@ export async function POST(req: NextRequest) {
 
     console.log(`[CHAT] Agent: ${agentConfig.description}, Thread: ${finalThreadId}, Resource: ${finalResourceId}`);
 
-    // Configure provider (sets ANTHROPIC_API_KEY and ANTHROPIC_BASE_URL)
+    // Provider configuration with runtime switching
+    // Extract provider from modelConfig if provided, otherwise use Anthropic default
+    let currentProviderId: ProviderId = 'anthropic';
+    if (providerId) {
+      currentProviderId = (providerId as ProviderId);
+      console.log(`[CHAT] Provider: ${currentProviderId}`);
+    }
+
+    // Configure Claude Agent SDK for the selected provider
+    configureProviderForSDK(currentProviderId);
+
+    // Validate provider environment
+    const providerValidation = validateProviderEnvironment(currentProviderId);
+    if (!providerValidation.valid) {
+      console.warn(`[CHAT] Provider validation failed: ${providerValidation.missingVars.join(', ')}`);
+    }
+
+    // Get provider configuration
     const providerConfig = getAnthropicConfig();
     process.env.ANTHROPIC_API_KEY = providerConfig.apiKey;
     if (providerConfig.baseURL) {
