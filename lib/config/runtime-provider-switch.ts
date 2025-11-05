@@ -92,6 +92,10 @@ export function getProviderDisplayModelId(providerId: ProviderId, modelId: strin
 
 /**
  * Validate that the required environment variables are set for a provider
+ *
+ * For AWS Bedrock:
+ * - Required: AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+ * - Optional: AWS_SESSION_TOKEN (for temporary credentials via STS, MFA, or IAM roles)
  */
 export function validateProviderEnvironment(providerId: ProviderId): {
   valid: boolean;
@@ -104,6 +108,7 @@ export function validateProviderEnvironment(providerId: ProviderId): {
       if (!process.env.AWS_REGION) missingVars.push('AWS_REGION');
       if (!process.env.AWS_ACCESS_KEY_ID) missingVars.push('AWS_ACCESS_KEY_ID');
       if (!process.env.AWS_SECRET_ACCESS_KEY) missingVars.push('AWS_SECRET_ACCESS_KEY');
+      // AWS_SESSION_TOKEN is optional (for temporary credentials)
       break;
 
     case 'vertex':

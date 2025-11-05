@@ -4,11 +4,15 @@
  * Supports runtime model switching with native third-party provider support:
  * - Anthropic: Direct API via ANTHROPIC_API_KEY
  * - AWS Bedrock: Native support via CLAUDE_CODE_USE_BEDROCK=1 + AWS credentials
+ *   Required: AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+ *   Optional: AWS_SESSION_TOKEN (for temporary credentials via STS, MFA, or IAM roles)
  * - GCP Vertex AI: Native support via CLAUDE_CODE_USE_VERTEX=1 + GCP credentials
  * - Azure OpenAI: Via gateway using ANTHROPIC_BASE_URL
  *
  * The Claude Agent SDK automatically detects environment variables and uses
  * the appropriate provider at runtime.
+ *
+ * Reference: https://docs.claude.com/en/docs/claude-code/amazon-bedrock.md
  */
 
 export interface ProviderConfig {
@@ -28,12 +32,18 @@ export type ProviderId = 'anthropic' | 'bedrock' | 'vertex' | 'azure-openai'
  * Runtime Provider Switching:
  * - Anthropic: Uses ANTHROPIC_API_KEY directly (default)
  * - Bedrock: Set CLAUDE_CODE_USE_BEDROCK=1 + AWS credentials
+ *   Required: AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+ *   Optional: AWS_SESSION_TOKEN (for temporary credentials)
  * - Vertex: Set CLAUDE_CODE_USE_VERTEX=1 + GCP credentials
  * - Azure: Set ANTHROPIC_BASE_URL + Azure Gateway credentials
+ *
+ * Reference: https://docs.claude.com/en/docs/claude-code/amazon-bedrock.md
  */
 export function getProviderConfig(): ProviderConfig {
   // Check for native third-party provider indicators
   if (process.env.CLAUDE_CODE_USE_BEDROCK === '1') {
+    // AWS Bedrock - Claude Agent SDK will use environment variables directly
+    // It automatically picks up: AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN
     return {
       provider: 'bedrock',
       apiKey: process.env.AWS_SECRET_ACCESS_KEY || '',
