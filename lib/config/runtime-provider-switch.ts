@@ -65,11 +65,12 @@ export function configureProviderForSDK(providerId: ProviderId): void {
 export function getProviderDisplayModelId(providerId: ProviderId, modelId: string): string {
   switch (providerId) {
     case 'bedrock':
-      // Bedrock uses anthropic.claude-3-5-sonnet-20241022-v2:0 format
+      // Bedrock uses us.anthropic.claude-{model}-{version}-v1:0 format
       // Extract friendly name from ID
-      if (modelId.includes('sonnet')) return 'Claude 3.5 Sonnet (Bedrock)';
-      if (modelId.includes('opus')) return 'Claude 3 Opus (Bedrock)';
-      if (modelId.includes('haiku')) return 'Claude 3 Haiku (Bedrock)';
+      if (modelId.includes('sonnet-4')) return 'Claude Sonnet 4 (Bedrock)';
+      if (modelId.includes('3-7-sonnet')) return 'Claude 3.7 Sonnet (Bedrock)';
+      if (modelId.includes('opus-4')) return 'Claude Opus 4 (Bedrock)';
+      if (modelId.includes('haiku')) return 'Claude Haiku 4.5 (Bedrock)';
       return 'Bedrock Model';
 
     case 'vertex':

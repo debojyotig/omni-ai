@@ -125,20 +125,26 @@ export const MODELS: Record<string, ModelConfig[]> = {
   ],
   bedrock: [
     {
-      id: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
-      name: 'Claude 3.5 Sonnet (Bedrock)',
+      id: 'us.anthropic.claude-sonnet-4-20250514-v1:0',
+      name: 'Claude Sonnet 4 (Bedrock)',
       provider: 'bedrock',
       maxTokens: 200000
     },
     {
-      id: 'anthropic.claude-3-opus-20240229-v1:0',
-      name: 'Claude 3 Opus (Bedrock)',
+      id: 'us.anthropic.claude-3-7-sonnet-20250219-v1:0',
+      name: 'Claude 3.7 Sonnet (Bedrock)',
       provider: 'bedrock',
       maxTokens: 200000
     },
     {
-      id: 'anthropic.claude-3-haiku-20240307-v1:0',
-      name: 'Claude 3 Haiku (Bedrock)',
+      id: 'us.anthropic.claude-opus-4-20250514-v1:0',
+      name: 'Claude Opus 4 (Bedrock)',
+      provider: 'bedrock',
+      maxTokens: 200000
+    },
+    {
+      id: 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
+      name: 'Claude Haiku 4.5 (Bedrock)',
       provider: 'bedrock',
       maxTokens: 200000
     }

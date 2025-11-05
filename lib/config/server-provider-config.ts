@@ -49,9 +49,10 @@ export function getProviderConfig(): ProviderConfig {
       apiKey: process.env.AWS_SECRET_ACCESS_KEY || '',
       awsRegion: process.env.AWS_REGION || 'us-east-1',
       models: [
-        'anthropic.claude-3-5-sonnet-20241022-v2:0',
-        'anthropic.claude-3-opus-20240229-v1:0',
-        'anthropic.claude-3-haiku-20240307-v1:0'
+        'us.anthropic.claude-sonnet-4-20250514-v1:0',
+        'us.anthropic.claude-3-7-sonnet-20250219-v1:0',
+        'us.anthropic.claude-opus-4-20250514-v1:0',
+        'us.anthropic.claude-haiku-4-5-20251001-v1:0'
       ]
     }
   }
