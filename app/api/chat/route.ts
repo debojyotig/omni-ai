@@ -11,7 +11,7 @@ import { mcpServers } from '@/lib/mcp/claude-sdk-mcp-config';
 import { subAgentConfigs } from '@/lib/agents/subagent-configs';
 import { withHallucinationReduction } from '@/lib/agents/hallucination-reduction';
 import { getSystemPromptWithStandardization } from '@/lib/agents/standardized-response-format';
-import { getAnthropicConfig } from '@/lib/config/server-provider-config';
+import { getAnthropicConfig, getProviderConfig } from '@/lib/config/server-provider-config';
 import { configureProviderForSDK, validateProviderEnvironment } from '@/lib/config/runtime-provider-switch';
 import { getSessionStore } from '@/lib/session/simple-session-store';
 import type { AgentType } from '@/lib/stores/agent-store';
@@ -150,12 +150,24 @@ export async function POST(req: NextRequest) {
       console.warn(`[CHAT] Provider validation failed: ${providerValidation.missingVars.join(', ')}`);
     }
 
-    // Get provider configuration
-    const providerConfig = getAnthropicConfig();
-    process.env.ANTHROPIC_API_KEY = providerConfig.apiKey;
-    if (providerConfig.baseURL) {
-      process.env.ANTHROPIC_BASE_URL = providerConfig.baseURL;
-      console.log(`[CHAT] Using gateway: ${providerConfig.baseURL}`);
+    // Get full provider configuration including available models
+    const fullProviderConfig = getProviderConfig();
+    const anthropicConfig = getAnthropicConfig();
+
+    // Log available models for debugging
+    console.log(`[CHAT] Provider: ${currentProviderId}, Available models:`, fullProviderConfig.models);
+    if (modelId) {
+      const isAllowedModel = fullProviderConfig.models.includes(modelId);
+      console.log(`[CHAT] Selected model: ${modelId}, Is allowed: ${isAllowedModel}`);
+      if (!isAllowedModel) {
+        console.warn(`[CHAT] ⚠️ WARNING: Model ${modelId} is NOT in the allowed list for ${currentProviderId}!`);
+        console.warn(`[CHAT] Allowed models: ${fullProviderConfig.models.join(', ')}`);
+      }
+    }
+    process.env.ANTHROPIC_API_KEY = anthropicConfig.apiKey;
+    if (anthropicConfig.baseURL) {
+      process.env.ANTHROPIC_BASE_URL = anthropicConfig.baseURL;
+      console.log(`[CHAT] Using gateway: ${anthropicConfig.baseURL}`);
     } else {
       delete process.env.ANTHROPIC_BASE_URL; // Use default Anthropic API
       console.log('[CHAT] Using direct Anthropic API');
