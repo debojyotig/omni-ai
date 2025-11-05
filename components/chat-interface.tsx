@@ -35,7 +35,8 @@ export function ChatInterface() {
   const toolStepsRef = useRef<Map<string, { stepId: string; startTime: number }>>(new Map());
 
   const { selectedAgent } = useAgentStore();
-  const { selectedProviderId, selectedModelId, getActiveModelSettings } = useProviderStore();
+  const { selectedProviderId, selectedModelId, getActiveModelSettings, getModelSettings } = useProviderStore();
+  const [modelSettings, setModelSettings] = useState<any>(null);
   const { setRunning, setHint, reset: resetProgress } = useProgressStore();
   const {
     activeConversationId,
@@ -84,6 +85,14 @@ export function ChatInterface() {
     };
     checkRehydration();
   }, [clearSteps, createConversation, loadFromDatabase, syncCreateConversation]);
+
+  // Load model settings when model selection changes
+  useEffect(() => {
+    if (selectedProviderId && selectedModelId) {
+      const settings = getModelSettings(selectedProviderId, selectedModelId);
+      setModelSettings(settings);
+    }
+  }, [selectedProviderId, selectedModelId, getModelSettings]);
 
   // Clear activity and streaming state when switching conversations
   // NOTE: We do NOT abort the request - it continues in background and completes when switched back
@@ -562,6 +571,12 @@ export function ChatInterface() {
                   </Button>
                 )}
               </div>
+              {/* Settings Badge */}
+              {modelSettings && (
+                <div className="text-xs text-muted-foreground mt-2 ml-1">
+                  {selectedModelId} ({modelSettings.maxOutputTokens}t, {modelSettings.temperature.toFixed(1)}°)
+                </div>
+              )}
             </div>
           </div>
         </>

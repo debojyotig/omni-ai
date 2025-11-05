@@ -12,6 +12,7 @@ import { useState, useEffect } from 'react'
 import { useProviderStore } from '@/lib/stores/provider-store'
 import { useAgentStore, AGENTS } from '@/lib/stores/agent-store'
 import { PROVIDERS } from '@/lib/config/provider-config'
+import type { RuntimeSettings } from '@/lib/stores/provider-store'
 import {
   Select,
   SelectContent,
@@ -31,9 +32,10 @@ interface ProviderStatus {
 }
 
 export function ChatHeader() {
-  const { selectedProviderId, selectedModelId, setModel, getAllModels } = useProviderStore()
+  const { selectedProviderId, selectedModelId, setModel, getAllModels, getModelSettings } = useProviderStore()
   const { selectedAgent, setAgent } = useAgentStore()
   const [availableProviders, setAvailableProviders] = useState<ProviderStatus[]>([])
+  const [modelSettings, setModelSettingsState] = useState<RuntimeSettings | null>(null)
 
   // Fetch configured providers on mount
   useEffect(() => {
@@ -50,6 +52,14 @@ export function ChatHeader() {
     }
     fetchProviders()
   }, [])
+
+  // Load settings when model selection changes
+  useEffect(() => {
+    if (selectedProviderId && selectedModelId) {
+      const settings = getModelSettings(selectedProviderId, selectedModelId)
+      setModelSettingsState(settings)
+    }
+  }, [selectedProviderId, selectedModelId, getModelSettings])
 
   const allModels = getAllModels()
 
@@ -116,14 +126,16 @@ export function ChatHeader() {
             onValueChange={setModel}
             disabled={allModels.length === 0}
           >
-            <SelectTrigger className="w-[240px] border-0 shadow-none focus:ring-0">
+            <SelectTrigger className="w-[320px] border-0 shadow-none focus:ring-0">
               <SelectValue placeholder="Select a model">
                 {currentModel && (
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{currentModel.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      ({selectedProviderId})
-                    </span>
+                    {modelSettings && (
+                      <span className="text-xs text-muted-foreground">
+                        ({modelSettings.maxOutputTokens}t, {modelSettings.temperature.toFixed(1)}°)
+                      </span>
+                    )}
                   </div>
                 )}
               </SelectValue>
