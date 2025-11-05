@@ -12,6 +12,7 @@ import { Send, Loader2, StopCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useAgentStore } from '@/lib/stores/agent-store';
+import { useProviderStore } from '@/lib/stores/provider-store';
 import { useProgressStore } from '@/lib/stores/progress-store';
 import { useConversationStore } from '@/lib/stores/conversation-store';
 import { useActivityStore } from '@/lib/stores/activity-store';
@@ -34,7 +35,8 @@ export function ChatInterface() {
   const toolStepsRef = useRef<Map<string, { stepId: string; startTime: number }>>(new Map());
 
   const { selectedAgent } = useAgentStore();
-  const { setRunning, setHint, reset: resetProgress, hint } = useProgressStore();
+  const { selectedProviderId, selectedModelId, getActiveModelSettings } = useProviderStore();
+  const { setRunning, setHint, reset: resetProgress } = useProgressStore();
   const {
     activeConversationId,
     createConversation,
@@ -180,6 +182,9 @@ export function ChatInterface() {
         planningStepRef.current = updatedSteps[updatedSteps.length - 1].id;
       }
 
+      // Get current model settings
+      const modelSettings = getActiveModelSettings();
+
       // Call API with SSE streaming
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -189,6 +194,15 @@ export function ChatInterface() {
           agent: selectedAgent,
           threadId: messageConversationId, // Use captured conversation ID as thread ID
           resourceId: 'default-user', // User identifier (can be enhanced later)
+          providerId: selectedProviderId,
+          modelId: selectedModelId,
+          modelConfig: selectedProviderId && selectedModelId ? {
+            providerId: selectedProviderId,
+            modelId: selectedModelId,
+            maxOutputTokens: modelSettings.maxOutputTokens,
+            temperature: modelSettings.temperature,
+            maxIterations: modelSettings.maxIterations,
+          } : undefined,
         }),
         signal: controller.signal,
       });

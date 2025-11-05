@@ -8,12 +8,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useProviderStore } from '@/lib/stores/provider-store'
-import {
-  useAgentConfigStore,
-  type AgentConfig,
-  getAllDefaultConfigs,
-} from '@/lib/stores/agent-config-store'
+import { useProviderStore, type RuntimeSettings } from '@/lib/stores/provider-store'
 import { Slider } from '@/components/ui/slider'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -36,9 +31,13 @@ interface ProviderStatus {
 }
 
 export function AgentConfigTab() {
-  const { selectedProviderId, selectedModelId, getAllModels } =
-    useProviderStore()
-  const { getConfig, setConfig, resetConfig } = useAgentConfigStore()
+  const {
+    selectedProviderId,
+    selectedModelId,
+    getAllModels,
+    getModelSettings,
+    setModelSetting,
+  } = useProviderStore()
 
   const [selectedConfigProviderId, setSelectedConfigProviderId] = useState<
     string | null
@@ -49,11 +48,9 @@ export function AgentConfigTab() {
   const [availableProviders, setAvailableProviders] = useState<ProviderStatus[]>([])
 
   // Local state for sliders
-  const [maxOutputTokens, setMaxOutputTokens] = useState(8192)
+  const [maxOutputTokens, setMaxOutputTokens] = useState(4096)
   const [temperature, setTemperature] = useState(0.7)
   const [maxIterations, setMaxIterations] = useState(15)
-
-  const [showSavedIndicator, setShowSavedIndicator] = useState(false)
 
   // Fetch configured providers on mount
   useEffect(() => {
@@ -82,48 +79,24 @@ export function AgentConfigTab() {
   // Load config when selection changes
   useEffect(() => {
     if (selectedConfigProviderId && selectedConfigModelId) {
-      const config = getConfig(selectedConfigProviderId, selectedConfigModelId)
-      setMaxOutputTokens(config.maxOutputTokens)
-      setTemperature(config.temperature)
-      setMaxIterations(config.maxIterations)
+      const settings = getModelSettings(selectedConfigProviderId, selectedConfigModelId)
+      setMaxOutputTokens(settings.maxOutputTokens)
+      setTemperature(settings.temperature)
+      setMaxIterations(settings.maxIterations)
     }
-  }, [selectedConfigProviderId, selectedConfigModelId, getConfig])
-
-  const handleSave = () => {
-    if (!selectedConfigProviderId || !selectedConfigModelId) return
-
-    const config: AgentConfig = {
-      providerId: selectedConfigProviderId,
-      modelId: selectedConfigModelId,
-      maxOutputTokens,
-      temperature,
-      maxIterations,
-    }
-
-    setConfig(config)
-    setShowSavedIndicator(true)
-
-    // Hide indicator after 2 seconds
-    setTimeout(() => setShowSavedIndicator(false), 2000)
-  }
+  }, [selectedConfigProviderId, selectedConfigModelId, getModelSettings])
 
   const handleReset = () => {
     if (!selectedConfigProviderId || !selectedConfigModelId) return
 
-    resetConfig(selectedConfigProviderId, selectedConfigModelId)
-
-    // Reload default config
-    const defaultConfig = getConfig(
-      selectedConfigProviderId,
-      selectedConfigModelId
-    )
-    setMaxOutputTokens(defaultConfig.maxOutputTokens)
-    setTemperature(defaultConfig.temperature)
-    setMaxIterations(defaultConfig.maxIterations)
+    // Reset to defaults by loading them from getModelSettings without override
+    const defaultSettings = getModelSettings(selectedConfigProviderId, selectedConfigModelId)
+    setMaxOutputTokens(defaultSettings.maxOutputTokens)
+    setTemperature(defaultSettings.temperature)
+    setMaxIterations(defaultSettings.maxIterations)
   }
 
   const allModels = getAllModels()
-  const defaultConfigs = getAllDefaultConfigs()
 
   // Get configured provider IDs
   const configuredProviderIds = new Set(
@@ -145,12 +118,8 @@ export function AgentConfigTab() {
   }, {} as Record<string, typeof filteredModels>)
 
   // Get default config for selected provider
-  const defaultConfig = selectedConfigProviderId
-    ? defaultConfigs[selectedConfigProviderId] || {
-        maxOutputTokens: 4096,
-        temperature: 0.7,
-        maxIterations: 10,
-      }
+  const defaultConfig = selectedConfigProviderId && selectedConfigModelId
+    ? getModelSettings(selectedConfigProviderId, selectedConfigModelId)
     : null
 
   return (
@@ -212,8 +181,8 @@ export function AgentConfigTab() {
           <div className="flex items-start gap-2 text-sm text-muted-foreground p-3 rounded bg-muted/50">
             <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <div>
-              <span className="font-medium">Default for {selectedConfigProviderId}:</span>{' '}
-              {defaultConfig.maxOutputTokens?.toLocaleString() || 4096} tokens, temp {defaultConfig.temperature || 0.7}, max {defaultConfig.maxIterations || 10} iterations
+              <span className="font-medium">Current settings for {selectedConfigProviderId}:</span>{' '}
+              {defaultConfig.maxOutputTokens.toLocaleString()} tokens, temp {defaultConfig.temperature.toFixed(1)}, max {defaultConfig.maxIterations} iterations
             </div>
           </div>
         )}
@@ -232,7 +201,14 @@ export function AgentConfigTab() {
             </div>
             <Slider
               value={[maxOutputTokens]}
-              onValueChange={([value]) => setMaxOutputTokens(value)}
+              onValueChange={([value]) => {
+                setMaxOutputTokens(value)
+                if (selectedConfigProviderId && selectedConfigModelId) {
+                  setModelSetting(selectedConfigProviderId, selectedConfigModelId, {
+                    maxOutputTokens: value,
+                  })
+                }
+              }}
               min={1024}
               max={100000}
               step={512}
@@ -254,7 +230,15 @@ export function AgentConfigTab() {
             </div>
             <Slider
               value={[temperature * 10]}
-              onValueChange={([value]) => setTemperature(value / 10)}
+              onValueChange={([value]) => {
+                const newTemp = value / 10
+                setTemperature(newTemp)
+                if (selectedConfigProviderId && selectedConfigModelId) {
+                  setModelSetting(selectedConfigProviderId, selectedConfigModelId, {
+                    temperature: newTemp,
+                  })
+                }
+              }}
               min={0}
               max={20}
               step={1}
@@ -276,7 +260,14 @@ export function AgentConfigTab() {
             </div>
             <Slider
               value={[maxIterations]}
-              onValueChange={([value]) => setMaxIterations(value)}
+              onValueChange={([value]) => {
+                setMaxIterations(value)
+                if (selectedConfigProviderId && selectedConfigModelId) {
+                  setModelSetting(selectedConfigProviderId, selectedConfigModelId, {
+                    maxIterations: value,
+                  })
+                }
+              }}
               min={1}
               max={25}
               step={1}
@@ -290,22 +281,17 @@ export function AgentConfigTab() {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            <Button onClick={handleSave} className="flex-1">
-              Save Configuration
-            </Button>
-            <Button onClick={handleReset} variant="outline">
+            <Button onClick={handleReset} variant="outline" className="w-full">
               <RotateCcw className="w-4 h-4 mr-2" />
               Reset to Default
             </Button>
           </div>
 
-          {/* Save Indicator */}
-          {showSavedIndicator && (
-            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-              <CheckCircle2 className="w-4 h-4" />
-              Configuration saved successfully
-            </div>
-          )}
+          {/* Auto-save Indicator */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 rounded-lg bg-muted/50 border border-muted">
+            <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+            Settings auto-save when you adjust sliders
+          </div>
         </div>
       ) : (
         <div className="p-8 text-center text-muted-foreground">

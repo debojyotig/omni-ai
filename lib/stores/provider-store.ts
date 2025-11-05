@@ -3,6 +3,7 @@
  *
  * Manages selected provider and model state with localStorage persistence.
  * Enables runtime switching without app restart.
+ * Supports per-model configuration (temperature, max tokens, iterations).
  */
 
 import { create } from 'zustand'
@@ -17,10 +18,75 @@ import {
   type ModelConfig
 } from '@/lib/config/provider-config'
 
+/**
+ * Runtime configuration for a specific model
+ */
+export interface RuntimeSettings {
+  maxOutputTokens: number
+  temperature: number
+  maxIterations: number
+}
+
+/**
+ * Default settings per model type (determined by model name patterns)
+ */
+const DEFAULT_SETTINGS: Record<string, RuntimeSettings> = {
+  haiku: {
+    maxOutputTokens: 2000,
+    temperature: 0.7,
+    maxIterations: 10
+  },
+  sonnet: {
+    maxOutputTokens: 4096,
+    temperature: 0.7,
+    maxIterations: 15
+  },
+  opus: {
+    maxOutputTokens: 8192,
+    temperature: 0.5,
+    maxIterations: 20
+  },
+  'gpt-4-turbo': {
+    maxOutputTokens: 8192,
+    temperature: 0.7,
+    maxIterations: 15
+  },
+  'gpt-4': {
+    maxOutputTokens: 8192,
+    temperature: 0.7,
+    maxIterations: 15
+  },
+  'gpt-3.5': {
+    maxOutputTokens: 4096,
+    temperature: 0.7,
+    maxIterations: 10
+  }
+}
+
+/**
+ * Get default settings based on model name
+ */
+function getDefaultSettingsForModel(modelId: string): RuntimeSettings {
+  // Match by model name patterns
+  if (modelId.includes('haiku')) return DEFAULT_SETTINGS.haiku
+  if (modelId.includes('opus')) return DEFAULT_SETTINGS.opus
+  if (modelId.includes('sonnet')) return DEFAULT_SETTINGS.sonnet
+  if (modelId.includes('gpt-4-turbo')) return DEFAULT_SETTINGS['gpt-4-turbo']
+  if (modelId.includes('gpt-4')) return DEFAULT_SETTINGS['gpt-4']
+  if (modelId.includes('gpt-3.5')) return DEFAULT_SETTINGS['gpt-3.5']
+
+  // Default fallback
+  return DEFAULT_SETTINGS.sonnet
+}
+
 interface ProviderState {
   // Current selections
   selectedProviderId: string | null
   selectedModelId: string | null
+
+  // Per-model runtime settings
+  // Key format: "providerId:modelId"
+  modelSettings: Record<string, RuntimeSettings>
 
   // Actions
   setProvider: (providerId: string) => void
@@ -28,11 +94,20 @@ interface ProviderState {
   initializeDefaults: () => void
   reset: () => void
 
+  // Settings actions
+  setModelSetting: (
+    providerId: string,
+    modelId: string,
+    settings: Partial<RuntimeSettings>
+  ) => void
+
   // Getters
   getAvailableProviders: () => ProviderInfo[]
   getAvailableModels: () => ModelConfig[]
   getAllModels: () => ModelConfig[]
   isReady: () => boolean
+  getModelSettings: (providerId: string, modelId: string) => RuntimeSettings
+  getActiveModelSettings: () => RuntimeSettings
 }
 
 export const useProviderStore = create<ProviderState>()(
@@ -41,6 +116,7 @@ export const useProviderStore = create<ProviderState>()(
       // State
       selectedProviderId: null,
       selectedModelId: null,
+      modelSettings: {},
 
       // Actions
       setProvider: (providerId: string) => {
@@ -96,7 +172,24 @@ export const useProviderStore = create<ProviderState>()(
       reset: () => {
         set({
           selectedProviderId: null,
-          selectedModelId: null
+          selectedModelId: null,
+          modelSettings: {}
+        })
+      },
+
+      /**
+       * Update runtime settings for a specific model
+       */
+      setModelSetting: (providerId: string, modelId: string, settings: Partial<RuntimeSettings>) => {
+        const key = `${providerId}:${modelId}`
+        const state = get()
+        const existing = state.modelSettings[key] || getDefaultSettingsForModel(modelId)
+
+        set({
+          modelSettings: {
+            ...state.modelSettings,
+            [key]: { ...existing, ...settings }
+          }
         })
       },
 
@@ -119,14 +212,35 @@ export const useProviderStore = create<ProviderState>()(
       isReady: () => {
         const state = get()
         return !!(state.selectedProviderId && state.selectedModelId)
+      },
+
+      /**
+       * Get settings for a specific model
+       */
+      getModelSettings: (providerId: string, modelId: string): RuntimeSettings => {
+        const key = `${providerId}:${modelId}`
+        const state = get()
+        return state.modelSettings[key] || getDefaultSettingsForModel(modelId)
+      },
+
+      /**
+       * Get settings for currently selected model
+       */
+      getActiveModelSettings: (): RuntimeSettings => {
+        const state = get()
+        if (!state.selectedProviderId || !state.selectedModelId) {
+          return DEFAULT_SETTINGS.sonnet
+        }
+        return state.getModelSettings(state.selectedProviderId, state.selectedModelId)
       }
     }),
     {
       name: 'omni-ai-provider-storage',
-      // Only persist the selections
+      // Persist selections and all model settings
       partialize: (state) => ({
         selectedProviderId: state.selectedProviderId,
-        selectedModelId: state.selectedModelId
+        selectedModelId: state.selectedModelId,
+        modelSettings: state.modelSettings
       })
     }
   )
@@ -144,4 +258,11 @@ export function getCurrentModel(): ModelConfig | null {
 
   const allModels = getAllModels()
   return allModels.find(m => m.id === selectedModelId) || null
+}
+
+/**
+ * Get current model settings
+ */
+export function getCurrentModelSettings(): RuntimeSettings {
+  return useProviderStore.getState().getActiveModelSettings()
 }

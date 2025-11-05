@@ -14,6 +14,7 @@ import { getSystemPromptWithStandardization } from '@/lib/agents/standardized-re
 import { getAnthropicConfig } from '@/lib/config/server-provider-config';
 import { getSessionStore } from '@/lib/session/simple-session-store';
 import type { AgentType } from '@/lib/stores/agent-store';
+import type { RuntimeSettings } from '@/lib/stores/provider-store';
 
 /**
  * Master Orchestrator Instructions
@@ -81,10 +82,36 @@ function getAgentConfiguration(agentType: AgentType) {
  * POST /api/chat
  *
  * Handles chat messages with streaming support via Server-Sent Events (SSE)
+ *
+ * Request body:
+ * {
+ *   message: string (required)
+ *   agent?: 'smart' | 'datadog' | 'correlator'
+ *   threadId?: string
+ *   resourceId?: string
+ *   providerId?: string (for model config)
+ *   modelId?: string (for model config)
+ *   modelConfig?: {
+ *     providerId: string
+ *     modelId: string
+ *     maxOutputTokens: number
+ *     temperature: number
+ *     maxIterations: number
+ *   }
+ * }
  */
 export async function POST(req: NextRequest) {
   try {
-    const { message, agent, threadId, resourceId } = await req.json();
+    const body = await req.json();
+    const {
+      message,
+      agent,
+      threadId,
+      resourceId,
+      providerId,
+      modelId,
+      modelConfig
+    } = body;
 
     // Validate inputs
     if (!message || !message.trim()) {
@@ -127,6 +154,16 @@ export async function POST(req: NextRequest) {
       console.log('[CHAT] Starting new session');
     }
 
+    // Apply model configuration if provided
+    let maxTurns = 10; // Default
+    let modelConfigInfo = '';
+
+    if (modelConfig) {
+      maxTurns = modelConfig.maxIterations || 10;
+      modelConfigInfo = `Model: ${modelId}, Tokens: ${modelConfig.maxOutputTokens}, Temp: ${modelConfig.temperature}, Iterations: ${modelConfig.maxIterations}`;
+      console.log(`[CHAT] ${modelConfigInfo}`);
+    }
+
     // Execute query with Claude SDK
     const result = query({
       prompt: message,
@@ -135,7 +172,7 @@ export async function POST(req: NextRequest) {
         systemPrompt: agentConfig.systemPrompt,
         agents: agentConfig.agents,
         mcpServers,
-        maxTurns: 10,
+        maxTurns: maxTurns,
         // Grant permission to all MCP tools (omni-api)
         canUseTool: async (toolName: string, input: any) => {
           // Allow all omni-api-mcp tools automatically
