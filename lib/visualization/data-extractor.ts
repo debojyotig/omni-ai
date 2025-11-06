@@ -224,7 +224,7 @@ function extractTimeSeriesFromText(content: string): DataPattern | null {
 
   return {
     type: 'timeseries',
-    confidence: 0.75,
+    confidence: 0.4,  // Reduced from 0.75 - plain text time series detection too prone to false positives (e.g., dates in text)
     data: {
       date: dates,
       value: values,
@@ -283,7 +283,7 @@ function extractComparisonFromLines(content: string): DataPattern | null {
 
   return {
     type: 'comparison',
-    confidence: 0.8,
+    confidence: 0.6,  // Reduced from 0.8 - plain text comparison detection prone to false positives
     data: comparisonData,
     metadata: {
       title: 'Comparison Data',
@@ -327,7 +327,7 @@ function extractKeyValueData(content: string): DataPattern | null {
   if (allNumeric) {
     return {
       type: count > 5 ? 'distribution' : 'comparison',
-      confidence: 0.7,
+      confidence: 0.5,  // Reduced from 0.7 - plain text key-value detection prone to false positives
       data: dataPoints,
       metadata: {
         title: 'Data Summary',
