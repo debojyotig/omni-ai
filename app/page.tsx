@@ -86,19 +86,19 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Right Activity Panel - desktop only (hidden on mobile/tablet) */}
-        {activeView === 'chat' && (
-          <>
-            {/* Desktop: show activity panel on large screens */}
-            <div className="hidden lg:block">
-              <ActivityPanel />
-            </div>
-            {/* Mobile/Tablet: show activity drawer */}
+        {/* Right Activity Panel - always present, visible during active work (persists across views) */}
+        <>
+          {/* Desktop: show activity panel on large screens */}
+          <div className="hidden lg:block">
+            <ActivityPanel />
+          </div>
+          {/* Mobile/Tablet: show activity drawer - only in chat view */}
+          {activeView === 'chat' && (
             <div className="lg:hidden">
               <MobileActivityDrawer open={activityDrawerOpen} onOpenChange={setActivityDrawerOpen} />
             </div>
-          </>
-        )}
+          )}
+        </>
       </SidebarInset>
     </SidebarProvider>
   )
