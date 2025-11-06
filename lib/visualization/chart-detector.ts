@@ -325,9 +325,11 @@ export function detectVisualizablePatterns(content: string): DataPattern[] {
       patterns.push(timeSeriesPattern);
     } else {
       // Keep as regular table if not time-series
+      // Use lower confidence (0.7) to allow client-side filtering
+      // This prevents false-positive table detection on plain text responses
       patterns.push({
         type: 'table',
-        confidence: 0.95,
+        confidence: 0.7,
         data: table,
         metadata: {
           title: 'Data Table',

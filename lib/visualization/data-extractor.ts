@@ -164,7 +164,7 @@ function extractPlainTextTable(content: string): DataPattern | null {
 
   return {
     type: 'table',
-    confidence: 0.85,
+    confidence: 0.5,  // Reduced from 0.85 - plain text table detection is very prone to false positives
     data: {
       headers: headerParts,
       rows,
