@@ -553,66 +553,29 @@ export function convertTableToTimeSeries(headers: string[], rows: string[][]): D
 }
 
 /**
- * Main extraction function - prioritizes Recharts visualizations
- * Tries multiple strategies in order of preference:
- * 1. Comparison lines (name/label + value format - highest confidence)
- * 2. Key-value pairs (for comparison/distribution charts)
- * 3. Time-series extraction from text
- * 4. Plain text tables (converted to time-series if applicable)
+ * Main extraction function - only extracts from explicit sources
+ *
+ * DISABLED: Automatic plain text pattern extraction (was unreliable)
+ * - No more auto-detection of comparison lines
+ * - No more auto-detection of key-value pairs
+ * - No more auto-detection of time-series from text
+ * - No more auto-detection of plain text tables
+ *
+ * SUPPORTED: Only explicit structured data
+ * 1. Markdown tables (proper formatting with pipes and separators)
+ * 2. JSON blocks in ```json code blocks
+ * 3. <visualization> tags provided by agents
+ *
+ * Agents should provide visualizations explicitly via <visualization> tags
+ * instead of relying on pattern detection.
  */
-export function extractStructuredData(content: string): DataPattern | null {
-  // Strategy 1: Try comparison extraction from formatted lines (highest specificity)
-  const comparisonData = extractComparisonFromLines(content);
-  if (comparisonData) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[DataExtractor] Extracted comparison data from lines');
-    }
-    return comparisonData;
-  }
-
-  // Strategy 2: Try key-value extraction (often reveals comparison data)
-  const kvData = extractKeyValueData(content);
-  if (kvData) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[DataExtractor] Extracted key-value data:', kvData.type);
-    }
-    return kvData;
-  }
-
-  // Strategy 3: Try time-series extraction
-  const timeSeriesData = extractTimeSeriesFromText(content);
-  if (timeSeriesData) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[DataExtractor] Extracted time-series from text');
-    }
-    return timeSeriesData;
-  }
-
-  // Strategy 4: Try plain text table (and convert to chart if possible)
-  const tableData = extractPlainTextTable(content);
-  if (tableData && tableData.data.headers && tableData.data.rows) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[DataExtractor] Extracted table with headers:', tableData.data.headers);
-    }
-
-    // Aggressively try to convert to time-series chart
-    if (isTableTimeSeries(tableData.data.headers, tableData.data.rows)) {
-      const timeSeries = convertTableToTimeSeries(tableData.data.headers, tableData.data.rows);
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[DataExtractor] Converted table to time-series chart');
-      }
-      return timeSeries;
-    }
-
-    // Return as table (fallback for non-visualizable data)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[DataExtractor] Keeping as plain table');
-    }
-    return tableData;
-  }
+export function extractStructuredData(_content: string): DataPattern | null {
+  // All auto-extraction from plain text has been disabled
+  // Patterns were too unreliable and caused false positives
+  // Use explicit <visualization> tags or markdown tables instead
 
   if (process.env.NODE_ENV === 'development') {
-    console.log('[DataExtractor] No structured data found');
+    console.log('[DataExtractor] Auto-extraction disabled - only explicit sources supported');
   }
   return null;
 }

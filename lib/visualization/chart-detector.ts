@@ -1,8 +1,14 @@
 /**
  * Chart Detector
  *
- * Intelligently detects visualizable data patterns in agent responses
- * Supports: time-series, comparisons, distributions, breakdowns, tables
+ * Extracts visualizable data patterns from agent responses
+ *
+ * SUPPORTED SOURCES:
+ * 1. <visualization> tags - Agents explicitly provide visualization hints with data
+ * 2. JSON blocks - ```json code blocks with structured data
+ * 3. Markdown tables - Properly formatted | tables | with separators |
+ *
+ * DISABLED: Auto-detection from plain text (was unreliable)
  */
 
 import { isTableTimeSeries, convertTableToTimeSeries } from './data-extractor';
@@ -17,6 +23,50 @@ export interface DataPattern {
     xAxisLabel?: string;
     yAxisLabel?: string;
   };
+}
+
+/**
+ * Extracts <visualization> tags provided by agents
+ * Format: <visualization type="timeseries|comparison|distribution|table" data-type="json|csv|table">
+ *   JSON or CSV data here
+ * </visualization>
+ */
+function extractVisualizationTags(content: string): DataPattern[] {
+  const patterns: DataPattern[] = [];
+  const vizRegex = /<visualization\s+type="([^"]+)"(?:\s+title="([^"]*)")?(?:\s+data-type="([^"]*)")?[^>]*>([\s\S]*?)<\/visualization>/gi;
+
+  let match;
+  while ((match = vizRegex.exec(content)) !== null) {
+    const type = match[1].toLowerCase() as any;
+    const title = match[2] || undefined;
+    const dataType = match[3] || 'json';
+    const content = match[4].trim();
+
+    try {
+      let data: any;
+
+      if (dataType === 'json' || content.startsWith('{') || content.startsWith('[')) {
+        data = JSON.parse(content);
+      } else {
+        // For CSV or other formats, keep as-is for now
+        data = content;
+      }
+
+      patterns.push({
+        type,
+        confidence: 0.95, // High confidence - agents explicitly provided this
+        data,
+        metadata: {
+          title: title || `${type.charAt(0).toUpperCase() + type.slice(1)} Data`,
+          description: 'Agent-provided visualization',
+        },
+      });
+    } catch (e) {
+      console.error('[ChartDetector] Failed to parse visualization tag:', e);
+    }
+  }
+
+  return patterns;
 }
 
 /**
@@ -272,12 +322,19 @@ function isDistribution(data: any): boolean {
 
 /**
  * Main detection function
+ * Priority order:
+ * 1. Agent-provided <visualization> tags (highest priority, 0.95 confidence)
+ * 2. JSON blocks in ```json code blocks (0.85 confidence)
+ * 3. Markdown tables (0.75 confidence)
  */
 export function detectVisualizablePatterns(content: string): DataPattern[] {
   const patterns: DataPattern[] = [];
 
+  // Priority 1: Extract agent-provided <visualization> tags
+  const vizTags = extractVisualizationTags(content);
+  patterns.push(...vizTags);
 
-  // Extract and analyze JSON blocks
+  // Priority 2: Extract and analyze JSON blocks
   const jsonBlocks = extractJsonBlocks(content);
 
   for (const block of jsonBlocks) {
@@ -339,8 +396,7 @@ export function detectVisualizablePatterns(content: string): DataPattern[] {
   }
 
   // Return only high-confidence patterns
-  // Use 0.75 threshold matching server-side hybrid extractor
-  // Server already filters patterns < 0.75, so patterns reaching client have been validated
+  // Threshold: 0.75 (visualization tags are 0.95, JSON is 0.85, markdown tables are 0.75)
   const filtered = patterns.filter((p) => p.confidence >= 0.75).slice(0, 3);
   return filtered; // Max 3 visualizations per message
 }
