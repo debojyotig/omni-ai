@@ -73,11 +73,11 @@ export default function Home() {
             {/* Progress bar always visible if work is running (persists across views) */}
             <IterationProgress />
 
-            {activeView === 'chat' && (
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <ChatInterface />
-              </div>
-            )}
+            {/* Keep ChatInterface mounted but hidden to preserve SSE stream during navigation */}
+            <div className={`flex-1 min-h-0 overflow-hidden ${activeView === 'chat' ? 'block' : 'hidden'}`}>
+              <ChatInterface />
+            </div>
+
             {activeView === 'settings' && (
               <div className="flex-1 min-h-0 overflow-hidden">
                 <SettingsPanel />
