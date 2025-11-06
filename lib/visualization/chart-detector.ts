@@ -337,7 +337,9 @@ export function detectVisualizablePatterns(content: string): DataPattern[] {
   }
 
   // Return only high-confidence patterns
-  const filtered = patterns.filter((p) => p.confidence >= 0.75).slice(0, 3);
+  // Use stricter 0.85 threshold on client-side to avoid false positives
+  // Low-confidence patterns (0.75-0.85) will be caught by server-side hybrid extractor
+  const filtered = patterns.filter((p) => p.confidence >= 0.85).slice(0, 3);
   return filtered; // Max 3 visualizations per message
 }
 
