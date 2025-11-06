@@ -304,41 +304,47 @@ function extractComparisonFromLines(content: string): DataPattern | null {
  * Filters out false positives like dates ("First Flight: June 4, 2010")
  */
 function extractKeyValueData(content: string): DataPattern | null {
-  // Look for patterns like "Key: Value" or "Key = Value"
-  const kvPattern = /([A-Za-z][A-Za-z0-9\s]*)[:\=]\s*([\d,.-]+%?)/g;
+  // Look for patterns like "Key: Value", "Key = Value", or "Key - Value" (common in formatted text)
+  // Process line by line to avoid cross-line contamination
   const dataPoints: Record<string, number | string> = {};
-  let match;
+  const lines = content.split('\n');
+  const kvPattern = /([A-Za-z][A-Za-z0-9\s]*?)[:\=\-]\s*([\d,.-]+%?)/g;
   let count = 0;
 
-  while ((match = kvPattern.exec(content)) !== null) {
-    const key = match[1].trim();
-    let value: any = match[2].trim();
+  for (const line of lines) {
+    let match;
+    // Reset regex for each line
+    kvPattern.lastIndex = 0;
+    while ((match = kvPattern.exec(line)) !== null) {
+      const key = match[1].trim();
+      let value: any = match[2].trim();
 
-    // Skip keys that are likely dates or metadata (First Flight, Last Updated, etc)
-    const keyLower = key.toLowerCase();
-    if (
-      keyLower.includes('flight') ||
-      keyLower.includes('date') ||
-      keyLower.includes('time') ||
-      keyLower.includes('launch') ||
-      keyLower.includes('updated') ||
-      keyLower.includes('first') ||
-      keyLower.includes('last') ||
-      key.length > 30 // Skip very long keys (likely descriptions)
-    ) {
-      continue;
+      // Skip keys that are likely dates or metadata (First Flight, Last Updated, etc)
+      const keyLower = key.toLowerCase();
+      if (
+        keyLower.includes('flight') ||
+        keyLower.includes('date') ||
+        keyLower.includes('time') ||
+        keyLower.includes('launch') ||
+        keyLower.includes('updated') ||
+        keyLower.includes('first') ||
+        keyLower.includes('last') ||
+        key.length > 30 // Skip very long keys (likely descriptions)
+      ) {
+        continue;
+      }
+
+      // Parse numeric value
+      if (value.includes('%')) {
+        value = parseFloat(value);
+      } else {
+        const parsed = parseFloat(value.replace(/,/g, ''));
+        value = isNaN(parsed) ? value : parsed;
+      }
+
+      dataPoints[key] = value;
+      count++;
     }
-
-    // Parse numeric value
-    if (value.includes('%')) {
-      value = parseFloat(value);
-    } else {
-      const parsed = parseFloat(value.replace(/,/g, ''));
-      value = isNaN(parsed) ? value : parsed;
-    }
-
-    dataPoints[key] = value;
-    count++;
   }
 
   if (count < 2) return null;
