@@ -40,15 +40,12 @@ export function ChatInterface() {
   const { setRunning, setHint, reset: resetProgress } = useProgressStore();
   const {
     activeConversationId,
-    createConversation,
     addMessage,
     getActiveConversation,
-    loadFromDatabase,
-    syncCreateConversation,
     syncAddMessage,
     syncUpdateConversationTitle,
   } = useConversationStore();
-  const { addStep, updateStep, completeStep, clearSteps, setThreadId } = useActivityStore();
+  const { addStep, completeStep, clearSteps, setThreadId } = useActivityStore();
 
   // Get active conversation and its messages
   const activeConversation = getActiveConversation();
@@ -59,20 +56,23 @@ export function ChatInterface() {
     setIsMounted(true);
 
     // Wait for store to rehydrate from localStorage before loading from database
+    // NOTE: Empty dependency array - this runs ONCE on mount only
+    // Uses getState() to access fresh store state without creating dependencies
     const checkRehydration = async () => {
       const state = useConversationStore.getState() as any;
       if (state._hasHydrated) {
         // Load conversations from database
-        await loadFromDatabase('default-user');
+        const { loadFromDatabase: loadDB, createConversation: createConv, syncCreateConversation: syncCreate } = useConversationStore.getState() as any;
+        await loadDB('default-user');
 
         const updatedState = useConversationStore.getState() as any;
         if (updatedState.conversations.length === 0) {
-          const newConversationId = createConversation();
+          const newConversationId = createConv();
           // Sync the newly created conversation to database
           const newState = useConversationStore.getState() as any;
           const newConversation = newState.conversations.find((c: any) => c.id === newConversationId);
           if (newConversation) {
-            await syncCreateConversation(newConversationId, newConversation.title, 'default-user');
+            await syncCreate(newConversationId, newConversation.title, 'default-user');
           }
         }
         // Clear activity state on initial hydration
@@ -85,7 +85,7 @@ export function ChatInterface() {
       }
     };
     checkRehydration();
-  }, [clearSteps, createConversation, loadFromDatabase, syncCreateConversation]);
+  }, [clearSteps]); // Only depends on clearSteps which is stable
 
   // Load model settings when model selection changes
   useEffect(() => {
