@@ -15,6 +15,7 @@ import { getAnthropicConfig, getProviderConfig } from '@/lib/config/server-provi
 import { configureProviderForSDK, validateProviderEnvironment } from '@/lib/config/runtime-provider-switch';
 import { getSessionStore } from '@/lib/session/simple-session-store';
 import { getPromptInput, logInputMode } from '@/lib/agents/streaming-input-mode';
+import { isContextExhaustedError, ContextMessages } from '@/lib/agents/context-manager';
 import type { AgentType } from '@/lib/stores/agent-store';
 import type { RuntimeSettings } from '@/lib/stores/provider-store';
 import type { ProviderId } from '@/lib/config/server-provider-config';
@@ -331,10 +332,34 @@ export async function POST(req: NextRequest) {
             name: error?.name,
             stack: error?.stack?.split('\n').slice(0, 3).join('\n')
           });
+
+          // Handle context exhaustion errors gracefully
+          if (isContextExhaustedError(error)) {
+            console.warn('[CHAT] Context exhaustion detected - sending helpful guidance to user');
+            try {
+              // Send a helpful message about context limits
+              const guidanceChunk = {
+                type: 'assistant',
+                message: {
+                  content: [
+                    {
+                      type: 'text',
+                      text: ContextMessages.error(modelId || 'claude')
+                    }
+                  ]
+                }
+              };
+              const data = `data: ${JSON.stringify(guidanceChunk)}\n\n`;
+              controller.enqueue(encoder.encode(data));
+            } catch (enqueueError) {
+              // Controller already closed
+            }
+          }
+
           try {
-            controller.error(error);
-          } catch (errorError) {
-            // Controller already closed, ignore
+            controller.close();
+          } catch (closeError) {
+            // Already closed, ignore
           }
         }
       }
