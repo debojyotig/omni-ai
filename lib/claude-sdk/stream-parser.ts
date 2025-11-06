@@ -351,8 +351,17 @@ export class StreamParser {
   /**
    * Get displayed text (planning/reasoning filtered out)
    * This is what shows in the chat
+   *
+   * SAFEGUARD: If all text was filtered (empty displayedText but non-empty accumulatedText),
+   * return accumulated text instead. Never show blank responses.
    */
   getDisplayedText(): string {
+    // If we filtered everything, something went wrong - show the full text instead
+    if (this.displayedText.length === 0 && this.accumulatedText.length > 0) {
+      console.warn('[PARSER] WARNING: All text was filtered as planning. Showing unfiltered response instead.');
+      console.log('[PARSER] Accumulated text:', this.accumulatedText.substring(0, 200));
+      return this.accumulatedText;
+    }
     return this.displayedText;
   }
 
