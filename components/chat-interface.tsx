@@ -46,6 +46,7 @@ export function ChatInterface() {
     loadFromDatabase,
     syncCreateConversation,
     syncAddMessage,
+    syncUpdateConversationTitle,
   } = useConversationStore();
   const { addStep, updateStep, completeStep, clearSteps, setThreadId } = useActivityStore();
 
@@ -152,6 +153,15 @@ export function ChatInterface() {
     syncAddMessage(messageConversationId, userMessage, 'default-user').catch(err => {
       console.error('[ChatInterface] Failed to sync user message:', err)
     });
+
+    // If this is the first message, sync the auto-generated title to database
+    const conversationState = useConversationStore.getState() as any;
+    const conversation = conversationState.conversations.find((c: any) => c.id === messageConversationId);
+    if (conversation && conversationState.conversations.find((c: any) => c.id === messageConversationId)?.messages.length === 1) {
+      syncUpdateConversationTitle(messageConversationId, conversation.title, 'default-user').catch(err => {
+        console.error('[ChatInterface] Failed to sync conversation title:', err)
+      });
+    }
 
     const currentInput = input;
     setInput('');
