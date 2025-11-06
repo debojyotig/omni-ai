@@ -108,16 +108,16 @@ export async function POST(req: NextRequest) {
     const sessionStore = getSessionStore();
 
     // Get parent session ID
-    const parentSessionId = await sessionStore.getSessionId(forkFromThreadId, finalResourceId);
+    const parentSession = await sessionStore.getSessionId(forkFromThreadId, finalResourceId);
 
-    if (!parentSessionId) {
+    if (!parentSession) {
       return new Response(
         JSON.stringify({ error: 'Parent session not found. Cannot fork from non-existent thread.' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[FORK] Parent session: ${parentSessionId}`);
+    console.log(`[FORK] Parent session: ${parentSession.sessionId}`);
 
     // Execute query with Claude SDK, resuming from parent session
     // Note: Claude SDK will handle session forking internally
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
     const result = query({
       prompt: message,
       options: {
-        resume: parentSessionId, // Start from parent's context
+        resume: parentSession.sessionId, // Start from parent's context
         systemPrompt: agentConfig.systemPrompt,
         agents: agentConfig.agents,
         mcpServers,

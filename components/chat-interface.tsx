@@ -33,6 +33,7 @@ export function ChatInterface() {
   // Track step IDs for completion
   const planningStepRef = useRef<string | null>(null);
   const toolStepsRef = useRef<Map<string, { stepId: string; startTime: number }>>(new Map());
+  const todoStepsRef = useRef<Map<string, { stepId: string }>>(new Map());
 
   const { selectedAgent } = useAgentStore();
   const { selectedProviderId, selectedModelId, getActiveModelSettings, getModelSettings } = useProviderStore();
@@ -177,6 +178,7 @@ export function ChatInterface() {
     clearSteps();
     setThreadId(messageConversationId);
     toolStepsRef.current.clear();
+    todoStepsRef.current.clear();
     const { setOpen } = useActivityStore.getState();
     setOpen(true); // Auto-open activity panel for new messages
 
@@ -285,9 +287,12 @@ export function ChatInterface() {
             // Handle different parsed chunk types
             switch (parsedChunk.type) {
               case 'text':
-                // Update streaming content with accumulated text
-                console.log(`[STREAM] Text chunk received, length: ${parsedChunk.content.length}, accumulated: ${parsedChunk.accumulatedText.length}`);
-                setStreamingContent(parsedChunk.accumulatedText);
+                // Update streaming content with displayed text (planning filtered out)
+                if (parsedChunk.content.length > 0) {
+                  console.log(`[STREAM] Text chunk received, length: ${parsedChunk.content.length}, displayed: ${parsedChunk.displayedText.length}`);
+                }
+                // Display only filtered text (planning/reasoning removed)
+                setStreamingContent(parsedChunk.displayedText);
                 break;
 
               case 'tool_use':
@@ -350,6 +355,46 @@ export function ChatInterface() {
                 }
                 break;
 
+              case 'todo':
+                // Handle TodoWrite chunks from Claude SDK
+                console.log(`[STREAM] Todo chunk received with ${parsedChunk.todos.length} items`);
+
+                for (const todo of parsedChunk.todos) {
+                  const todoKey = `todo:${todo.content}`; // Unique key for this todo
+
+                  // Only process in_progress and completed todos
+                  if (todo.status === 'in_progress' || todo.status === 'completed') {
+                    if (!todoStepsRef.current.has(todoKey)) {
+                      // New todo - add it as a step
+                      const currentSteps = useActivityStore.getState().steps;
+                      const currentStepCount = currentSteps.length;
+
+                      addStep({
+                        type: 'analysis',
+                        title: todo.content,
+                        description: todo.activeForm,
+                        status: todo.status === 'in_progress' ? 'running' : 'done',
+                        icon: todo.status === 'completed' ? 'check' : 'dot',
+                      });
+
+                      const newSteps = useActivityStore.getState().steps;
+                      if (newSteps.length > currentStepCount) {
+                        const newStepId = newSteps[newSteps.length - 1].id;
+                        todoStepsRef.current.set(todoKey, { stepId: newStepId });
+                        console.log(`[STREAM] Added todo step: ${todo.content} (${newStepId})`);
+                      }
+                    } else {
+                      // Existing todo - update its status if it changed to completed
+                      const stepInfo = todoStepsRef.current.get(todoKey);
+                      if (stepInfo && todo.status === 'completed') {
+                        completeStep(stepInfo.stepId, 0);
+                        console.log(`[STREAM] Completed todo step: ${todo.content} (${stepInfo.stepId})`);
+                      }
+                    }
+                  }
+                }
+                break;
+
               case 'thinking':
                 // Extended thinking mode
                 console.log('[STREAM] Agent thinking...');
@@ -363,8 +408,15 @@ export function ChatInterface() {
 
               case 'system':
                 if (parsedChunk.subtype === 'complete') {
-                  // Clear hint on completion
-                  setHint(null);
+                  // If completion message contains important info (e.g., max iterations), show it
+                  if (parsedChunk.message && parsedChunk.message.includes('maximum iteration')) {
+                    console.log('[STREAM] System completion message:', parsedChunk.message);
+                    // Display max iterations warning as a hint that persists briefly
+                    setHint(`⚠️ ${parsedChunk.message}`);
+                  } else {
+                    // Clear hint on normal completion
+                    setHint(null);
+                  }
                 }
                 break;
             }
@@ -374,8 +426,8 @@ export function ChatInterface() {
         }
       }
 
-      // Add final assistant message with accumulated text
-      const finalText = parser.getAccumulatedText();
+      // Add final assistant message with displayed text (planning/reasoning filtered out)
+      const finalText = parser.getDisplayedText();
       if (finalText && messageConversationId) {
         const assistantMessage = {
           id: crypto.randomUUID(),

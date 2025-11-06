@@ -37,9 +37,15 @@ Your role:
    - api-correlator: For multi-API data correlation and consistency checks
    - general-investigator: For API exploration, service discovery, and general queries
 3. Let the sub-agent execute (they have tool access, you don't)
-4. Present the sub-agent's results to the user
+4. Present the sub-agent's results to the user clearly
 
 **Delegation is MANDATORY**: Every user query requiring data MUST be delegated to a sub-agent. You orchestrate, sub-agents execute.
+
+**ITERATION LIMITS**: Investigations are limited to ~10 turns. Sub-agents will:
+- Work efficiently to get results within this limit
+- Provide a summary of findings if they approach the limit
+- Suggest specific next steps for follow-up investigations
+Your job is to present their results clearly and ask follow-up questions if needed.
 
 Example (CORRECT):
 User: "What are the top 5 popular movies on TMDB?"
@@ -284,11 +290,24 @@ export async function POST(req: NextRequest) {
     // Stream response as Server-Sent Events
     const encoder = new TextEncoder();
     let capturedSessionId: string | null = null;
+    let iterationCount = 0;
+    let maxIterationsReached = false;
 
     const stream = new ReadableStream({
       async start(controller) {
         try {
           for await (const chunk of result) {
+            // Count iterations (roughly - count assistant messages)
+            if (chunk.type === 'assistant' && chunk.message?.content) {
+              iterationCount++;
+
+              // Check if we're approaching or at max iterations
+              if (iterationCount >= maxTurns - 1) {
+                maxIterationsReached = true;
+                console.log(`[CHAT] Iteration count: ${iterationCount}/${maxTurns} - max iterations being reached`);
+              }
+            }
+
             // Capture session ID from first chunk
             if (chunk.type === 'system' && chunk.subtype === 'init' && chunk.session_id) {
               capturedSessionId = chunk.session_id;
@@ -318,6 +337,28 @@ export async function POST(req: NextRequest) {
                 console.log(`[CHAT] Tools called: ${toolUses.map((t: any) => t.name).join(', ')}`);
               }
             }
+          }
+
+          // Send status message based on how stream ended
+          try {
+            console.log('[CHAT] Stream ended, sending completion status');
+
+            let completionMessage = 'Investigation complete';
+            if (maxIterationsReached && iterationCount >= maxTurns) {
+              completionMessage = `Investigation reached the maximum iteration limit (${maxTurns} iterations). The agent exhausted its allocated turns. If you need more analysis, you can start a new conversation with a higher iteration limit.`;
+              console.log('[CHAT] ⚠️  Max iterations reached - sending notification to user');
+            }
+
+            const completeChunk = {
+              type: 'system',
+              subtype: 'complete',
+              message: completionMessage
+            };
+            const data = `data: ${JSON.stringify(completeChunk)}\n\n`;
+            controller.enqueue(encoder.encode(data));
+            console.log('[CHAT] Completion message sent:', completionMessage.substring(0, 80) + '...');
+          } catch (enqueueError) {
+            console.log('[CHAT] Failed to send completion (controller closed):', enqueueError);
           }
 
           try {
