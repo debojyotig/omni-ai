@@ -32,6 +32,7 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
     setActiveConversation,
     deleteConversation,
     syncCreateConversation,
+    syncDeleteConversation,
   } = useConversationStore()
 
   // Sort conversations by updated date (most recent first)
@@ -132,9 +133,13 @@ export function OmniSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
                           <SidebarMenuAction
                             showOnHover
                             className="pointer-events-auto"
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.stopPropagation()
-                              deleteConversation(conversation.id)
+                              if (confirm('Delete this conversation?')) {
+                                deleteConversation(conversation.id)
+                                // Sync deletion to database
+                                await syncDeleteConversation(conversation.id, 'default-user')
+                              }
                             }}
                           >
                             <Trash2 className="size-3" />
