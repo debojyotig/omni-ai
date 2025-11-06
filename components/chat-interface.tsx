@@ -149,10 +149,22 @@ export function ChatInterface() {
     };
 
     addMessage(messageConversationId, userMessage);
+
     // Sync user message to database (fire and forget)
     syncAddMessage(messageConversationId, userMessage, 'default-user').catch(err => {
       console.error('[ChatInterface] Failed to sync user message:', err)
     });
+
+    // Immediately sync the auto-generated conversation title to database
+    // (title was auto-generated when addMessage was called)
+    const conversationState = useConversationStore.getState() as any;
+    const conversation = conversationState.conversations.find((c: any) => c.id === messageConversationId);
+    if (conversation && conversation.title !== 'New Conversation') {
+      // Only sync if title was actually generated (not the default)
+      syncUpdateConversationTitle(messageConversationId, conversation.title, 'default-user').catch(err => {
+        console.error('[ChatInterface] Failed to sync conversation title on send:', err);
+      });
+    }
 
     const currentInput = input;
     setInput('');
@@ -422,17 +434,8 @@ export function ChatInterface() {
       setAbortController(null);
       resetProgress();
 
-      // Sync conversation title to database if this was the first message
-      // (title was auto-generated from first user message content)
-      // Fire and forget - don't block on this
-      const conversationState = useConversationStore.getState() as any;
-      const conversation = conversationState.conversations.find((c: any) => c.id === messageConversationId);
-      if (conversation && conversation.messages.length === 2) {
-        // 2 messages = first user message + first assistant response
-        syncUpdateConversationTitle(messageConversationId, conversation.title, 'default-user').catch(err => {
-          console.error('[ChatInterface] Failed to sync conversation title:', err);
-        });
-      }
+      // Title syncing now happens immediately when first message is sent (line 158-167)
+      // No need to sync again here
     }
   };
 
