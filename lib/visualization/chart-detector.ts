@@ -325,11 +325,11 @@ export function detectVisualizablePatterns(content: string): DataPattern[] {
       patterns.push(timeSeriesPattern);
     } else {
       // Keep as regular table if not time-series
-      // Use lower confidence (0.7) to allow client-side filtering
-      // This prevents false-positive table detection on plain text responses
+      // Use 0.75 confidence to match client-side filtering threshold
+      // Markdown tables are reliable when properly formatted, so higher confidence is justified
       patterns.push({
         type: 'table',
-        confidence: 0.7,
+        confidence: 0.75,
         data: table,
         metadata: {
           title: 'Data Table',
@@ -339,9 +339,9 @@ export function detectVisualizablePatterns(content: string): DataPattern[] {
   }
 
   // Return only high-confidence patterns
-  // Use stricter 0.85 threshold on client-side to avoid false positives
-  // Low-confidence patterns (0.75-0.85) will be caught by server-side hybrid extractor
-  const filtered = patterns.filter((p) => p.confidence >= 0.85).slice(0, 3);
+  // Use 0.75 threshold matching server-side hybrid extractor
+  // Server already filters patterns < 0.75, so patterns reaching client have been validated
+  const filtered = patterns.filter((p) => p.confidence >= 0.75).slice(0, 3);
   return filtered; // Max 3 visualizations per message
 }
 
