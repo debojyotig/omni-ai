@@ -204,13 +204,24 @@ export async function POST(req: NextRequest) {
     // Single Message Mode: String for stateless processing
     const promptInput = getPromptInput(message, sessionId);
 
+    // Build system prompt configuration (must be object, not string)
+    const systemPromptConfig = agentConfig.systemPrompt
+      ? {
+          type: 'text' as const,
+          text: agentConfig.systemPrompt
+        }
+      : {
+          type: 'preset' as const,
+          preset: 'claude_code'
+        };
+
     // Execute query with Claude SDK
     const result = query({
       prompt: promptInput,
       options: {
         ...(modelId && { model: modelId }), // Use selected model if provided
         resume: sessionId || undefined, // Resume existing conversation or undefined for new
-        systemPrompt: agentConfig.systemPrompt,
+        systemPrompt: systemPromptConfig,
         agents: agentConfig.agents,
         mcpServers,
         maxTurns: maxTurns,
