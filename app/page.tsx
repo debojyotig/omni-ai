@@ -70,13 +70,13 @@ export default function Home() {
 
           {/* Main content area - isolated scroll container */}
           <div className="flex flex-1 flex-col overflow-hidden min-h-0">
+            {/* Progress bar always visible if work is running (persists across views) */}
+            <IterationProgress />
+
             {activeView === 'chat' && (
-              <>
-                <IterationProgress />
-                <div className="flex-1 min-h-0 overflow-hidden">
-                  <ChatInterface />
-                </div>
-              </>
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <ChatInterface />
+              </div>
             )}
             {activeView === 'settings' && (
               <div className="flex-1 min-h-0 overflow-hidden">
