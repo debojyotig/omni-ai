@@ -15,6 +15,7 @@ export interface SessionMapping {
   threadId: string;
   resourceId: string;
   sessionId: string;
+  modelId: string | null; // Track which model was used for this session
   createdAt: string;
   updatedAt: string;
 }
@@ -47,6 +48,7 @@ export class SimpleSessionStore {
         threadId TEXT NOT NULL,
         resourceId TEXT NOT NULL,
         sessionId TEXT NOT NULL,
+        modelId TEXT,
         createdAt TEXT DEFAULT (datetime('now')),
         updatedAt TEXT DEFAULT (datetime('now')),
         PRIMARY KEY (threadId, resourceId)
@@ -67,35 +69,37 @@ export class SimpleSessionStore {
   async saveSessionId(
     threadId: string,
     resourceId: string,
-    sessionId: string
+    sessionId: string,
+    modelId?: string
   ): Promise<void> {
     await this.init();
 
     await this.client.execute({
       sql: `
-        INSERT INTO session_mappings (threadId, resourceId, sessionId, updatedAt)
-        VALUES (?, ?, ?, datetime('now'))
+        INSERT INTO session_mappings (threadId, resourceId, sessionId, modelId, updatedAt)
+        VALUES (?, ?, ?, ?, datetime('now'))
         ON CONFLICT (threadId, resourceId)
         DO UPDATE SET
           sessionId = excluded.sessionId,
+          modelId = excluded.modelId,
           updatedAt = datetime('now')
       `,
-      args: [threadId, resourceId, sessionId],
+      args: [threadId, resourceId, sessionId, modelId || null],
     });
   }
 
   /**
-   * Get session ID for a thread/resource combination
+   * Get session ID and model for a thread/resource combination
    */
   async getSessionId(
     threadId: string,
     resourceId: string
-  ): Promise<string | null> {
+  ): Promise<{ sessionId: string; modelId: string | null } | null> {
     await this.init();
 
     const result = await this.client.execute({
       sql: `
-        SELECT sessionId
+        SELECT sessionId, modelId
         FROM session_mappings
         WHERE threadId = ? AND resourceId = ?
       `,
@@ -106,7 +110,10 @@ export class SimpleSessionStore {
       return null;
     }
 
-    return result.rows[0].sessionId as string;
+    return {
+      sessionId: result.rows[0].sessionId as string,
+      modelId: result.rows[0].modelId as string | null,
+    };
   }
 
   /**
@@ -132,7 +139,7 @@ export class SimpleSessionStore {
 
     const result = await this.client.execute({
       sql: `
-        SELECT threadId, resourceId, sessionId, createdAt, updatedAt
+        SELECT threadId, resourceId, sessionId, modelId, createdAt, updatedAt
         FROM session_mappings
         WHERE resourceId = ?
         ORDER BY updatedAt DESC
@@ -144,6 +151,7 @@ export class SimpleSessionStore {
       threadId: row.threadId as string,
       resourceId: row.resourceId as string,
       sessionId: row.sessionId as string,
+      modelId: row.modelId as string | null,
       createdAt: row.createdAt as string,
       updatedAt: row.updatedAt as string,
     }));
@@ -160,7 +168,7 @@ export class SimpleSessionStore {
 
     const result = await this.client.execute({
       sql: `
-        SELECT threadId, resourceId, sessionId, createdAt, updatedAt
+        SELECT threadId, resourceId, sessionId, modelId, createdAt, updatedAt
         FROM session_mappings
         WHERE threadId = ? AND resourceId = ?
       `,
@@ -176,6 +184,7 @@ export class SimpleSessionStore {
       threadId: row.threadId as string,
       resourceId: row.resourceId as string,
       sessionId: row.sessionId as string,
+      modelId: row.modelId as string | null,
       createdAt: row.createdAt as string,
       updatedAt: row.updatedAt as string,
     };

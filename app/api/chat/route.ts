@@ -185,23 +185,22 @@ export async function POST(req: NextRequest) {
     // Get session store
     const sessionStore = getSessionStore();
 
-    // Try to get existing session ID
-    // IMPORTANT: When a specific modelId is provided, we should start a fresh session
-    // to avoid resuming a session created with a different model (which causes SDK crashes)
+    // Try to get existing session ID with its model
+    // Only resume if the model matches the current model
     let sessionId: string | null = null;
+    const existingSession = await sessionStore.getSessionId(finalThreadId, finalResourceId);
 
-    if (!modelId) {
-      // No model override - safe to resume existing session
-      sessionId = await sessionStore.getSessionId(finalThreadId, finalResourceId);
-      if (sessionId) {
-        console.log(`[CHAT] Resuming session: ${sessionId}`);
+    if (existingSession) {
+      // Check if the model matches
+      if (existingSession.modelId === modelId) {
+        // Model matches - safe to resume
+        sessionId = existingSession.sessionId;
+        console.log(`[CHAT] Resuming session: ${sessionId} (model: ${modelId})`);
+      } else {
+        // Model mismatch - start fresh session
+        console.log(`[CHAT] Model mismatch - previous: ${existingSession.modelId}, current: ${modelId} - starting fresh session`);
       }
-    } else {
-      // Model explicitly provided - start fresh session to avoid model mismatch
-      console.log(`[CHAT] Model override provided (${modelId}) - starting fresh session to avoid mismatch`);
-    }
-
-    if (!sessionId) {
+    } else if (!sessionId) {
       console.log('[CHAT] Starting new session');
     }
 
@@ -290,8 +289,8 @@ export async function POST(req: NextRequest) {
 
               // Save session mapping if new (only if we didn't already have a sessionId)
               if (!sessionId) {
-                await sessionStore.saveSessionId(finalThreadId, finalResourceId, capturedSessionId);
-                console.log(`[CHAT] Saved session mapping: ${finalThreadId} → ${capturedSessionId}`);
+                await sessionStore.saveSessionId(finalThreadId, finalResourceId, capturedSessionId, modelId || undefined);
+                console.log(`[CHAT] Saved session mapping: ${finalThreadId} → ${capturedSessionId} (model: ${modelId || 'default'})`);
               }
             }
 
