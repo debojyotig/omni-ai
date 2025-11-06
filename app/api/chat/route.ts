@@ -14,6 +14,7 @@ import { getSystemPromptWithStandardization } from '@/lib/agents/standardized-re
 import { getAnthropicConfig, getProviderConfig } from '@/lib/config/server-provider-config';
 import { configureProviderForSDK, validateProviderEnvironment } from '@/lib/config/runtime-provider-switch';
 import { getSessionStore } from '@/lib/session/simple-session-store';
+import { getPromptInput, logInputMode } from '@/lib/agents/streaming-input-mode';
 import type { AgentType } from '@/lib/stores/agent-store';
 import type { RuntimeSettings } from '@/lib/stores/provider-store';
 import type { ProviderId } from '@/lib/config/server-provider-config';
@@ -195,9 +196,17 @@ export async function POST(req: NextRequest) {
       console.log(`[CHAT] ${modelConfigInfo}`);
     }
 
+    // Log streaming input mode status
+    logInputMode();
+
+    // Get appropriate prompt input based on feature flag
+    // Streaming Input Mode (recommended): AsyncGenerator for long-lived, stateful processing
+    // Single Message Mode: String for stateless processing
+    const promptInput = getPromptInput(message, sessionId);
+
     // Execute query with Claude SDK
     const result = query({
-      prompt: message,
+      prompt: promptInput,
       options: {
         ...(modelId && { model: modelId }), // Use selected model if provided
         resume: sessionId || undefined, // Resume existing conversation or undefined for new
