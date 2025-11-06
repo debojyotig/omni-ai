@@ -239,6 +239,8 @@ export async function POST(req: NextRequest) {
       hasModel: !!modelId,
       systemPromptType: systemPromptConfig.type,
       mcpServersCount: Object.keys(mcpServers).length,
+      skillsEnabled: true,
+      skillsPath: process.cwd() + '/.claude/skills',
       agentType: agentType
     });
 
@@ -253,14 +255,22 @@ export async function POST(req: NextRequest) {
           agents: agentConfig.agents,
           mcpServers,
           maxTurns: maxTurns,
-          // Grant permission to all MCP tools (omni-api)
+          // Grant permission to MCP tools and Skills
           canUseTool: async (toolName: string, input: any) => {
+            // Allow Skills (expert guidance system)
+            if (toolName === 'Skill') {
+              return { behavior: 'allow' as const, updatedInput: input };
+            }
             // Allow all omni-api-mcp tools automatically
             if (toolName.startsWith('mcp__omni-api__')) {
               return { behavior: 'allow' as const, updatedInput: input };
             }
             // Deny other tools (shouldn't happen, but safety first)
-            return { behavior: 'deny' as const, message: 'Only omni-api tools are allowed' };
+            return { behavior: 'deny' as const, message: 'Only Skills and omni-api tools are allowed' };
+          },
+          // Enable Skills from .claude/skills directory
+          settingSources: {
+            skillsPath: process.cwd() + '/.claude/skills'
           }
         }
       });
