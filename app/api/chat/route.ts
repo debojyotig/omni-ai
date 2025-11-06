@@ -269,9 +269,7 @@ export async function POST(req: NextRequest) {
             return { behavior: 'deny' as const, message: 'Only Skills and omni-api tools are allowed' };
           },
           // Enable Skills from .claude/skills directory
-          settingSources: {
-            skillsPath: process.cwd() + '/.claude/skills'
-          }
+          settingSources: process.cwd() + '/.claude/skills'
         }
       });
       console.log('[CHAT] Query object created successfully');
