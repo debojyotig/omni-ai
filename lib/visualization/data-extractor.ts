@@ -179,6 +179,7 @@ function extractPlainTextTable(content: string): DataPattern | null {
 /**
  * Detects time-series patterns in plain text
  * Example: "Jan: 100, Feb: 200, Mar: 150"
+ * Filters out false positives like dates ("February 6, 2018")
  */
 function extractTimeSeriesFromText(content: string): DataPattern | null {
   const months = [
@@ -199,11 +200,16 @@ function extractTimeSeriesFromText(content: string): DataPattern | null {
 
   if (!monthPattern.test(content)) return null;
 
-  // Try to extract month: value pairs
+  // Try to extract month: value pairs, but only in time-series context (not dates)
   const dataPoints: Record<string, number> = {};
   const lines = content.split('\n');
 
   for (const line of lines) {
+    // Skip lines that look like dates (contain "20XX" or day numbers > 28)
+    if (/\b20\d{2}\b/.test(line) || /\b\d{1,2},\s+20\d{2}\b/.test(line)) {
+      continue; // Skip date lines like "February 6, 2018"
+    }
+
     const monthMatches = line.matchAll(/(\w+)\s*:?\s*([\d,.-]+)/gi);
     for (const match of monthMatches) {
       const month = match[1].toLowerCase().substring(0, 3);
@@ -224,7 +230,7 @@ function extractTimeSeriesFromText(content: string): DataPattern | null {
 
   return {
     type: 'timeseries',
-    confidence: 0.4,  // Reduced from 0.75 - plain text time series detection too prone to false positives (e.g., dates in text)
+    confidence: 0.65,  // Restored to 0.65 - with improved date filtering above
     data: {
       date: dates,
       value: values,
@@ -283,7 +289,7 @@ function extractComparisonFromLines(content: string): DataPattern | null {
 
   return {
     type: 'comparison',
-    confidence: 0.6,  // Reduced from 0.8 - plain text comparison detection prone to false positives
+    confidence: 0.75,  // Restored from 0.8 (good balance between sensitivity and specificity)
     data: comparisonData,
     metadata: {
       title: 'Comparison Data',
@@ -295,6 +301,7 @@ function extractComparisonFromLines(content: string): DataPattern | null {
 /**
  * Extracts key-value data from plain text
  * Example: "Error Rate: 5.2%, Success Rate: 94.8%"
+ * Filters out false positives like dates ("First Flight: June 4, 2010")
  */
 function extractKeyValueData(content: string): DataPattern | null {
   // Look for patterns like "Key: Value" or "Key = Value"
@@ -306,6 +313,21 @@ function extractKeyValueData(content: string): DataPattern | null {
   while ((match = kvPattern.exec(content)) !== null) {
     const key = match[1].trim();
     let value: any = match[2].trim();
+
+    // Skip keys that are likely dates or metadata (First Flight, Last Updated, etc)
+    const keyLower = key.toLowerCase();
+    if (
+      keyLower.includes('flight') ||
+      keyLower.includes('date') ||
+      keyLower.includes('time') ||
+      keyLower.includes('launch') ||
+      keyLower.includes('updated') ||
+      keyLower.includes('first') ||
+      keyLower.includes('last') ||
+      key.length > 30 // Skip very long keys (likely descriptions)
+    ) {
+      continue;
+    }
 
     // Parse numeric value
     if (value.includes('%')) {
@@ -327,7 +349,7 @@ function extractKeyValueData(content: string): DataPattern | null {
   if (allNumeric) {
     return {
       type: count > 5 ? 'distribution' : 'comparison',
-      confidence: 0.5,  // Reduced from 0.7 - plain text key-value detection prone to false positives
+      confidence: 0.75,  // Restored to 0.75 - with improved validation above
       data: dataPoints,
       metadata: {
         title: 'Data Summary',
