@@ -154,15 +154,6 @@ export function ChatInterface() {
       console.error('[ChatInterface] Failed to sync user message:', err)
     });
 
-    // If this is the first message, sync the auto-generated title to database
-    const conversationState = useConversationStore.getState() as any;
-    const conversation = conversationState.conversations.find((c: any) => c.id === messageConversationId);
-    if (conversation && conversationState.conversations.find((c: any) => c.id === messageConversationId)?.messages.length === 1) {
-      syncUpdateConversationTitle(messageConversationId, conversation.title, 'default-user').catch(err => {
-        console.error('[ChatInterface] Failed to sync conversation title:', err)
-      });
-    }
-
     const currentInput = input;
     setInput('');
     setIsLoading(true);
@@ -430,6 +421,18 @@ export function ChatInterface() {
       setHint(null);
       setAbortController(null);
       resetProgress();
+
+      // Sync conversation title to database if this was the first message
+      // (title was auto-generated from first user message content)
+      // Fire and forget - don't block on this
+      const conversationState = useConversationStore.getState() as any;
+      const conversation = conversationState.conversations.find((c: any) => c.id === messageConversationId);
+      if (conversation && conversation.messages.length === 2) {
+        // 2 messages = first user message + first assistant response
+        syncUpdateConversationTitle(messageConversationId, conversation.title, 'default-user').catch(err => {
+          console.error('[ChatInterface] Failed to sync conversation title:', err);
+        });
+      }
     }
   };
 
