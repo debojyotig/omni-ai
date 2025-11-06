@@ -60,12 +60,13 @@ export async function extractStructuredDataHybrid(
   if (!shouldEnableLLM) {
     if (patternResult) {
       // Pattern found but low confidence, LLM disabled
+      // Do NOT return low-confidence patterns when LLM is disabled (causes bad visualizations)
       console.log(
-        `[Hybrid Extractor] Pattern confidence too low (${patternResult.confidence}), LLM fallback disabled`
+        `[Hybrid Extractor] Pattern confidence too low (${patternResult.confidence}), LLM fallback disabled - discarding pattern`
       );
       return {
-        pattern: patternResult,
-        method: 'pattern',
+        pattern: null,  // Return null instead of low-confidence pattern
+        method: 'none',
         fallbackUsed: false,
         duration: Date.now() - startTime,
       };
