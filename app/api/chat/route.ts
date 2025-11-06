@@ -105,7 +105,15 @@ function getAgentConfiguration(agentType: AgentType) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    // Try to get the raw body text first for debugging
+    const rawText = await req.text();
+    console.log('[CHAT] Raw request body length:', rawText.length);
+    if (rawText.length > 0 && rawText.length < 500) {
+      console.log('[CHAT] Raw request body:', rawText);
+    }
+
+    // Parse the JSON
+    const body = JSON.parse(rawText);
     const {
       message,
       agent,
@@ -178,11 +186,22 @@ export async function POST(req: NextRequest) {
     const sessionStore = getSessionStore();
 
     // Try to get existing session ID
-    let sessionId = await sessionStore.getSessionId(finalThreadId, finalResourceId);
+    // IMPORTANT: When a specific modelId is provided, we should start a fresh session
+    // to avoid resuming a session created with a different model (which causes SDK crashes)
+    let sessionId: string | null = null;
 
-    if (sessionId) {
-      console.log(`[CHAT] Resuming session: ${sessionId}`);
+    if (!modelId) {
+      // No model override - safe to resume existing session
+      sessionId = await sessionStore.getSessionId(finalThreadId, finalResourceId);
+      if (sessionId) {
+        console.log(`[CHAT] Resuming session: ${sessionId}`);
+      }
     } else {
+      // Model explicitly provided - start fresh session to avoid model mismatch
+      console.log(`[CHAT] Model override provided (${modelId}) - starting fresh session to avoid mismatch`);
+    }
+
+    if (!sessionId) {
       console.log('[CHAT] Starting new session');
     }
 
@@ -216,26 +235,45 @@ export async function POST(req: NextRequest) {
         };
 
     // Execute query with Claude SDK
-    const result = query({
-      prompt: promptInput,
-      options: {
-        ...(modelId && { model: modelId }), // Use selected model if provided
-        resume: sessionId || undefined, // Resume existing conversation or undefined for new
-        systemPrompt: systemPromptConfig,
-        agents: agentConfig.agents,
-        mcpServers,
-        maxTurns: maxTurns,
-        // Grant permission to all MCP tools (omni-api)
-        canUseTool: async (toolName: string, input: any) => {
-          // Allow all omni-api-mcp tools automatically
-          if (toolName.startsWith('mcp__omni-api__')) {
-            return { behavior: 'allow' as const, updatedInput: input };
-          }
-          // Deny other tools (shouldn't happen, but safety first)
-          return { behavior: 'deny' as const, message: 'Only omni-api tools are allowed' };
-        }
-      }
+    console.log('[CHAT] Calling Claude SDK query() with:', {
+      hasPrompt: !!promptInput,
+      hasModel: !!modelId,
+      systemPromptType: systemPromptConfig.type,
+      mcpServersCount: Object.keys(mcpServers).length,
+      agentType: agentType
     });
+
+    let result;
+    try {
+      result = query({
+        prompt: promptInput,
+        options: {
+          ...(modelId && { model: modelId }), // Use selected model if provided
+          resume: sessionId || undefined, // Resume existing conversation or undefined for new
+          systemPrompt: systemPromptConfig,
+          agents: agentConfig.agents,
+          mcpServers,
+          maxTurns: maxTurns,
+          // Grant permission to all MCP tools (omni-api)
+          canUseTool: async (toolName: string, input: any) => {
+            // Allow all omni-api-mcp tools automatically
+            if (toolName.startsWith('mcp__omni-api__')) {
+              return { behavior: 'allow' as const, updatedInput: input };
+            }
+            // Deny other tools (shouldn't happen, but safety first)
+            return { behavior: 'deny' as const, message: 'Only omni-api tools are allowed' };
+          }
+        }
+      });
+      console.log('[CHAT] Query object created successfully');
+    } catch (queryError: any) {
+      console.error('[CHAT] Error creating query:', {
+        message: queryError.message,
+        stack: queryError.stack,
+        code: queryError.code
+      });
+      throw queryError;
+    }
 
     // Stream response as Server-Sent Events
     const encoder = new TextEncoder();
@@ -281,8 +319,13 @@ export async function POST(req: NextRequest) {
           } catch (closeError) {
             // Already closed, that's fine
           }
-        } catch (error) {
-          console.error('[CHAT] Stream error:', error);
+        } catch (error: any) {
+          console.error('[CHAT] Stream error during iteration:', {
+            message: error?.message,
+            code: error?.code,
+            name: error?.name,
+            stack: error?.stack?.split('\n').slice(0, 3).join('\n')
+          });
           try {
             controller.error(error);
           } catch (errorError) {
