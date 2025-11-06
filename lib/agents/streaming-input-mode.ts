@@ -13,19 +13,24 @@
 
 /**
  * Check if streaming input mode is enabled
- * Default: true (recommended mode)
+ * Default: false (Single Message Mode - appropriate for stateless API)
+ *
+ * Note: Streaming Input Mode is designed for long-lived CLI applications
+ * with persistent connections. For stateless Next.js API routes, Single
+ * Message Mode is more appropriate.
  */
 export function isStreamingInputModeEnabled(): boolean {
   const mode = process.env.USE_STREAMING_INPUT_MODE;
-  // Default to true (recommended) if not specified
-  return mode !== 'false';
+  // Default to false (Single Message Mode) - more suitable for stateless APIs
+  return mode === 'true';
 }
 
 /**
  * Create an async generator for streaming input mode
  *
- * Yields a single user message that can be interrupted or extended
- * with additional messages during execution.
+ * Yields a single user message in the format expected by the Claude Agent SDK.
+ * The generator yields once and completes cleanly, allowing the SDK to process
+ * the message and any tool calls that follow.
  *
  * Note: Return type is 'any' due to SDK's internal type definitions.
  * The yielded object follows the SDKUserMessage structure exactly.
@@ -43,8 +48,7 @@ export async function* createStreamingPromptGenerator(
     },
     parent_tool_use_id: null
   };
-  // Generator keeps running to allow for future message queuing
-  // (e.g., user interrupts, additional messages, etc.)
+  // Generator completes after yielding the single message
 }
 
 /**

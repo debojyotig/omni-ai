@@ -2,19 +2,21 @@
 
 ## Overview
 
-Streaming Input Mode is now implemented with a **feature flag** that allows you to toggle between:
+Streaming Input Mode is implemented with a **feature flag** that allows you to toggle between:
 
-1. **Streaming Input Mode** (✅ **DEFAULT - RECOMMENDED**)
-   - Uses `AsyncGenerator` for prompt
-   - Long-lived, stateful processing
-   - Better for interactive chat applications
-   - Supports interruptions, permission requests, dynamic message queuing
-
-2. **Single Message Mode** (Fallback option)
+1. **Single Message Mode** (✅ **DEFAULT FOR NEXT.JS API ROUTES**)
    - Uses string for prompt
    - Stateless, single-message processing
-   - Better for lambda/serverless functions
-   - One-shot responses
+   - Better for Next.js API routes and serverless functions
+   - Simpler, more stable, one-request pattern
+
+2. **Streaming Input Mode** (Advanced - for CLI apps only)
+   - Uses `AsyncGenerator` for prompt
+   - Long-lived, stateful processing
+   - Better for long-lived CLI applications with persistent connections
+   - Supports interruptions, permission requests, dynamic message queuing
+
+**Note**: Default is `false` (Single Message Mode) because Next.js API routes are stateless. Streaming Input Mode is designed for long-lived CLI applications, not stateless web APIs.
 
 Reference: https://docs.claude.com/en/api/agent-sdk/streaming-vs-single-mode.md
 
@@ -24,16 +26,16 @@ Reference: https://docs.claude.com/en/api/agent-sdk/streaming-vs-single-mode.md
 
 **Environment Variable**: `USE_STREAMING_INPUT_MODE`
 
-**Default**: `true` (Streaming Input Mode - recommended)
+**Default**: `false` (Single Message Mode - appropriate for stateless API routes)
 
-### Enable Streaming Input Mode (Default)
-```bash
-USE_STREAMING_INPUT_MODE=true
-```
-
-### Use Single Message Mode (Fallback)
+### Use Single Message Mode (Default - Recommended for Next.js)
 ```bash
 USE_STREAMING_INPUT_MODE=false
+```
+
+### Enable Streaming Input Mode (CLI apps only)
+```bash
+USE_STREAMING_INPUT_MODE=true
 ```
 
 ---
@@ -105,33 +107,34 @@ When Streaming Input Mode is enabled, the AsyncGenerator yields:
 
 When you make a chat request, you'll see one of:
 
-**Streaming Input Mode Enabled:**
-```
-[STREAMING] Streaming Input Mode: ENABLED (long-lived, stateful)
-```
-
-**Single Message Mode:**
+**Single Message Mode (Default):**
 ```
 [STREAMING] Streaming Input Mode: DISABLED (single message mode)
+```
+
+**Streaming Input Mode (CLI mode - set USE_STREAMING_INPUT_MODE=true):**
+```
+[STREAMING] Streaming Input Mode: ENABLED (long-lived, stateful)
 ```
 
 ---
 
 ## When to Use Each Mode
 
-### ✅ Use Streaming Input Mode (Default)
-- Interactive chat applications
-- Multi-turn conversations
-- Need session persistence
-- Support for user interruptions
-- Real-time permission requests
-- omni-ai chat interface
+### ✅ Use Single Message Mode (Default for Next.js)
+- Next.js API routes (stateless)
+- Lambda/serverless functions
+- One-request-per-API-call pattern
+- No persistent connection needed
+- Simpler, more stable for web APIs
+- **omni-ai chat interface** (current use case)
 
-### Use Single Message Mode
-- Lambda/serverless (stateless functions)
-- One-shot API endpoints
-- Batch processing
-- No session state needed
+### Use Streaming Input Mode (Advanced - CLI apps only)
+- Long-lived CLI applications
+- Persistent connection scenarios
+- Need to handle user interruptions mid-processing
+- Complex multi-step interactions
+- Applications that maintain a session object
 
 ---
 
