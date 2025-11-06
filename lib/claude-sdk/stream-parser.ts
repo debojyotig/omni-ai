@@ -142,7 +142,7 @@ export class StreamParser {
     const textParts = content.filter((c: any) => c.type === 'text');
     if (textParts.length > 0) {
       const newText = textParts.map((t: any) => t.text).join('');
-      this.accumulatedText = newText;
+      this.accumulatedText += newText; // Append to accumulated, don't replace
       return {
         type: 'text',
         content: newText,
